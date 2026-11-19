@@ -9,4 +9,4 @@ Operational notes and daily administration reference.
 
 ## Sections
 
-- **[RHEL Documentation](/rhel/)** — Daily quick reference for RHEL administration.
+- **[RHEL Documentation]({{ '/rhel/' | relative_url }})** — Daily quick reference for RHEL administration (more sections coming soon).
