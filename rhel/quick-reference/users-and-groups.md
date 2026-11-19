@@ -1,3 +1,10 @@
+---
+layout: default
+title: "User & Group Management"
+parent: Quick Reference
+grand_parent: RHEL
+---
+
 # User & Group Management
 
 Daily user, group, password aging, `faillock`, and STIG configuration essentials for RHEL.

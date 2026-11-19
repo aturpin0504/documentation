@@ -1,3 +1,10 @@
+---
+layout: default
+title: "Package & Satellite Management"
+parent: Quick Reference
+grand_parent: RHEL
+---
+
 # Package & Satellite Management
 
 Daily package management (`dnf`, `rpm`), module streams, custom STIG-compliant repos, and Red Hat Satellite 6.19 maintenance.

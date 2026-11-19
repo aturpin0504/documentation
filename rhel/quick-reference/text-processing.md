@@ -1,3 +1,10 @@
+---
+layout: default
+title: Text Processing
+parent: Quick Reference
+grand_parent: RHEL
+---
+
 # Text Processing
 
 Daily text viewing, filtering, editing, and stream-processing tools for RHEL.

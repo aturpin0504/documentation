@@ -1,3 +1,10 @@
+---
+layout: default
+title: Essential CLI Tools
+parent: Quick Reference
+grand_parent: RHEL
+---
+
 # Essential Command Line Tools
 
 Daily command-line essentials for RHEL administration.

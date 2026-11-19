@@ -1,2 +1,29 @@
-title: My Documentation
-theme: minima
+# Site Identity
+title: "Documentation"
+description: "Operational notes and daily administration reference."
+url: "https://aturpin0504.github.io"
+baseurl: "/documentation"
+
+# Theme Configuration
+remote_theme: just-the-docs/just-the-docs
+
+plugins:
+  - jekyll-remote-theme
+
+# Enable Built-in Dark Mode
+color_scheme: "dark"
+
+# Sidebar & Navigation Settings
+search_enabled: true
+search:
+  heading_level: 3
+  previews: 2
+
+# Enable collapsible/expandable sections in the sidebar
+nav_folding: true
+
+# Markdown & Highlighting
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge

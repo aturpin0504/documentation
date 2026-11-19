@@ -1,3 +1,10 @@
+---
+layout: default
+title: File System Management
+parent: Quick Reference
+grand_parent: RHEL
+---
+
 # File System Management
 
 Daily file system hierarchy, mounting, navigation, permissions/SELinux context, searching, links, and archiving essentials for RHEL.
