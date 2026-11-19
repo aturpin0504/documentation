@@ -22,7 +22,7 @@ grand_parent: RHEL
 |---|---|
 | Display quick command help | `command --help` |
 | Display manual page | `man command` |
-| Search within a manual page | `man passwd \| grep shell` |
+| Search within a manual page | <code>man passwd &#124; grep shell</code> |
 | Display info page | `pinfo command` |
 
 ## Man Page Navigation
@@ -43,7 +43,7 @@ grand_parent: RHEL
 | Task | Command |
 |---|---|
 | Show command history | `history` |
-| Search history with grep | `history \| grep cat` |
+| Search history with grep | <code>history &#124; grep cat</code> |
 | Execute command by number | `!number` |
 | Clear in-memory history | `history -c` |
 | Write history to file | `history -w` |
@@ -71,8 +71,8 @@ grand_parent: RHEL
 
 | Task | Command |
 |---|---|
-| Pipe `ls` output to `less` pager | `ls \| less` |
-| Search running processes | `ps aux \| grep process` |
+| Pipe `ls` output to `less` pager | <code>ls &#124; less</code> |
+| Search running processes | <code>ps aux &#124; grep process</code> |
 | Open file with `less` pager | `less /etc/passwd` |
 
 ## Environment Variables & Shell Configuration
