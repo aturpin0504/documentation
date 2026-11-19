@@ -116,12 +116,12 @@ chmod 0644 /etc/profile.d/custom_env.sh
 | Task | Command |
 |---|---|
 | Show current username | `whoami` |
-| Show logged in users | `who` |
-| Show who is logged in and activity | `w` |
-| Show your user/group IDs | `id` |
-| Show specific user's identity | `id username` |
-| Show your groups | `groups` |
-| Show user's groups | `groups username` |
+| Show logged-in users/sessions | `who` |
+| Show logged-in users and activity | `w` — use `w -u` after `sudo` or `su` |
+| Show your user, primary group, and supplementary groups | `id` |
+| Show a specific user's identity and groups | `id username` |
+| Show only your group names | `id -Gn` |
+| Show only a specific user's group names | `id -Gn username` |
 
 ## Root Access Methods
 
@@ -173,8 +173,9 @@ username ALL=(ALL) ALL
 
 | Task | Command |
 |---|---|
-| Reboot the system | `systemctl reboot` |
-| Halt system | `systemctl halt` |
-| Power off system | `systemctl poweroff` |
-| Shortcut for reboot | `reboot` |
-| Shortcut for poweroff | `poweroff` |
+| Reboot the system immediately | `systemctl reboot` |
+| Power off the system immediately | `systemctl poweroff` |
+| Halt the OS without powering off the machine (uncommon) | `systemctl halt` |
+| Schedule a reboot | `shutdown -r +<minutes> "message"` |
+| Schedule a reboot | `shutdown -r +15 "Scheduled maintenance reboot in 15 minutes"` |
+| Cancel a scheduled shutdown or reboot | `shutdown -c` |
