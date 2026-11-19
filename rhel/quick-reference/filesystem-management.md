@@ -40,7 +40,7 @@ findmnt /home                     # Show a specific mount point
 mount /dev/sdb1 /mnt/data         # Temporarily mount a device
 umount /mnt/data                  # Unmount by mount point or device path
 df -h                             # Display disk space in human-readable form
-df -hT                            # Display disk space and file system types
+df -Th                            # Display disk space and file system types
 ```
 
 ### Applying `/etc/fstab` Changes
@@ -57,14 +57,15 @@ DISA STIG guidance for RHEL may require separate partitions or logical volumes f
 
 | Mount Point | Required STIG Options | Notes |
 |---|---|---|
-| `/tmp` | `defaults,nodev,nosuid,noexec` | Prevents device files, SUID binaries, and execution from `/tmp`. |
-| `/var/tmp` | `defaults,nodev,nosuid,noexec` | Same protections as `/tmp`. |
-| `/dev/shm` | `defaults,nodev,nosuid,noexec` | Shared-memory `tmpfs` mount. |
+| `/boot` | `defaults,nodev,nosuid` | Separate partition. |
+| `/boot/efi` | `umask=0077,shortname=winnt,nosuid,nodev` | Separate partition; where applicable. |
+| `/home` | `defaults,nodev,noexec,nosuid` | Separate partition for user home directories. |
+| `/tmp` | `defaults,nodev,noexec,nosuid` | Prevents device files, SUID binaries, and execution from `/tmp`. |
 | `/var` | `defaults,nodev` | Separate partition required. |
-| `/var/log` | `defaults,nodev,nosuid,noexec` | Separate partition for system logs. |
-| `/var/log/audit` | `defaults,nodev,nosuid,noexec` | Separate partition for `auditd` logs. |
-| `/home` | `defaults,nodev,nosuid` | Separate partition; `noexec` may be omitted when users must run local scripts or binaries. |
-| `/boot` | `defaults,nodev,nosuid` | Separate partition; apply `nodev,nosuid` to `/boot/efi` where applicable. |
+| `/var/log` | `defaults,nodev,noexec,nosuid` | Separate partition for system logs. |
+| `/var/log/audit` | `defaults,nodev,noexec,nosuid` | Separate partition for `auditd` logs. |
+| `/var/tmp` | `defaults,nodev,noexec,nosuid` | Same protections as `/tmp`. |
+| `/dev/shm` | `defaults,relatime,inode64,nodev,noexec,nosuid` | Shared-memory `tmpfs` mount. |
 
 Example `/etc/fstab` entry:
 
