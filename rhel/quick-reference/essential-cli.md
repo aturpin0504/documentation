@@ -3,6 +3,7 @@ layout: default
 title: Essential CLI Tools
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 1
 ---
 
 # Essential Command Line Tools
