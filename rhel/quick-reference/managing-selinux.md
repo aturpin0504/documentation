@@ -3,6 +3,7 @@ layout: default
 title: SELinux Fundamentals
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 17
 ---
 
 # SELinux Fundamentals
@@ -72,7 +73,7 @@ SELINUX=permissive
 SELINUX=disabled
 ```
 
-> [!NOTE]
+{: .note }
 > `sestatus -v` displays contexts for specific key files and processes defined in policy, not every object on the system. Use `ls -Z`, `ps Zaux`, or `ss -Ztul` to inspect contexts for files, processes, and ports.
 
 ## SELinux Context Labels
@@ -103,10 +104,10 @@ For daily administration, focus on the **type** field, which typically ends in `
 | Task | Command |
 |---|---|
 | View file or directory contexts | `ls -Z /var/www` |
-| View file-context policy rules | `semanage fcontext -l \| grep httpd` |
+| View file-context policy rules | <code>semanage fcontext -l &#124; grep httpd</code> |
 | View process contexts | `ps Zaux` |
 | View port contexts | `ss -Ztul` |
-| View port-context policy rules | `semanage port -l \| grep ssh` |
+| View port-context policy rules | <code>semanage port -l &#124; grep ssh</code> |
 
 ### Usage Notes
 
@@ -125,7 +126,7 @@ semanage port -l | grep ssh_port_t
 
 ## Setting File and Directory Contexts
 
-> [!IMPORTANT]
+{: .important }
 > Use `semanage` to modify SELinux policy and `restorecon` to apply the policy to files. Avoid using `chcon` for permanent changes because its changes are lost during a relabel.
 
 ### Add and Apply a File Context Rule
@@ -181,7 +182,7 @@ semanage fcontext -l | grep /web
 
 | Task | Command |
 |---|---|
-| List port labels related to SSH | `semanage port -l \| grep ssh` |
+| List port labels related to SSH | <code>semanage port -l &#124; grep ssh</code> |
 | Add SELinux label for SSH on TCP port 2022 | `semanage port -a -t ssh_port_t -p tcp 2022` |
 | Delete SELinux label for SSH on TCP port 2022 | `semanage port -d -t ssh_port_t -p tcp 2022` |
 
@@ -192,10 +193,10 @@ SELinux booleans provide a method to enable or disable specific policy behavior 
 | Task | Command |
 |---|---|
 | List all booleans | `getsebool -a` |
-| Search booleans | `getsebool -a \| grep ftp` |
+| Search booleans | <code>getsebool -a &#124; grep ftp</code> |
 | Set a boolean persistently | `setsebool -P ftpd_anon_write on` |
 
-> [!NOTE]
+{: .note }
 > SELinux booleans can change service behavior independently of the service's application configuration. Verify the intended effect before enabling a boolean persistently.
 
 ## SELinux Troubleshooting Workflow

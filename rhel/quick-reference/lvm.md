@@ -3,6 +3,7 @@ layout: default
 title: Understanding Logical Volume Manager (LVM)
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 16
 ---
 
 # Understanding Logical Volume Manager (LVM)
@@ -181,7 +182,7 @@ lvcreate -n lvdata2 -L 20G vgdata
 | `-L` | Specify size in bytes, MB, GB, and so on. A `+` adds capacity; an absolute value sets total capacity. |
 | `-l` | Specify extents or a percentage, such as `%FREE` or `%VG`. |
 
-> [!TIP]
+{: .tip }
 > Use `-r` with `lvextend` to resize the file system automatically after increasing the logical volume.
 
 ## Physical Volume Commands
@@ -211,7 +212,7 @@ lvcreate -n lvdata2 -L 20G vgdata
 | Format as Ext4 | `mkfs.ext4 /dev/vgdata/lvdata` |
 | Format as swap | `mkswap /dev/vgdata/lvswap` |
 
-> [!WARNING]
+{: .warning }
 > Formatting commands such as `mkfs.xfs`, `mkfs.ext4`, and `mkswap` overwrite existing file system metadata. Verify the target device before running them.
 
 ## Mounting File Systems
@@ -276,7 +277,7 @@ tmpfs /tmp tmpfs size=2G,mode=1777 0 0
 | Verify mounted file systems | `df -h` |
 | Verify `/etc/fstab` syntax | `findmnt --verify` |
 
-> [!WARNING]
+{: .warning }
 > Test `/etc/fstab` with `mount -a` before rebooting. An invalid entry can prevent normal boot or delay startup.
 
 ## Best Practices

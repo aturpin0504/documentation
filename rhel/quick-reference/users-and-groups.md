@@ -3,13 +3,14 @@ layout: default
 title: "User & Group Management"
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 4
 ---
 
 # User and Group Management
 
 Daily user, group, password aging, account lockout, and STIG-aligned configuration essentials for RHEL.
 
-> [!NOTE]
+{: .note }
 > Validate password, account-lockout, and mount requirements against the currently applicable organizational baseline and STIG before implementing changes in a production environment.
 
 ## Managing Users
@@ -74,7 +75,7 @@ userdel -f jsmith
 | `-d dir` | Specify the home directory. |
 | `-r` | Create a system account. |
 
-> [!IMPORTANT]
+{: .important }
 > `usermod -aG` **appends** groups. Using `usermod -G` without `-a` replaces the user's existing secondary-group memberships.
 
 ### Restrict User Login
@@ -87,7 +88,7 @@ usermod -s /sbin/nologin username
 touch /etc/nologin.txt
 ```
 
-> [!NOTE]
+{: .note }
 > Users attempting to log in while `/etc/nologin.txt` exists will see the file's contents.
 
 ## Password and Account Management
@@ -281,7 +282,7 @@ groupmems -g sales -a linda
 groupmems -g sales -d linda
 ```
 
-> [!NOTE]
+{: .note }
 > `/etc/group` lists explicit secondary-group members. Use `id`, `groups`, `getent group`, or `groupmems` as appropriate when investigating effective group membership.
 
 ## Account Locking with `faillock`
@@ -337,7 +338,7 @@ faillock --dir /var/log/faillock
    passwd username
    ```
 
-> [!NOTE]
+{: .note }
 > Systems configured with the `silent` option may not display lockout messages to users.
 
 ## Password and Group File Integrity

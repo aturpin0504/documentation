@@ -3,6 +3,7 @@ layout: default
 title: systemd Units and Targets
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 8
 ---
 
 # systemd Units and Targets
@@ -49,7 +50,7 @@ Each unit is defined by a **unit file**, which describes the resource and how `s
 | `enabled` | Unit is configured to start automatically at boot. |
 | `disabled` | Unit is not configured to start automatically at boot. |
 
-> [!NOTE]
+{: .note }
 > `enabled` and `disabled` describe boot-time configuration. `active` and `inactive` describe the unit's current runtime state.
 
 ## Listing Units
@@ -86,7 +87,7 @@ Use `systemctl edit` to create a drop-in override instead of modifying package-p
 | `/etc/systemd/system/` | Locally created unit files and custom overrides. |
 | `/usr/lib/systemd/system/` | Package-provided default unit files; do not edit directly. |
 
-> [!IMPORTANT]
+{: .important }
 > Run `systemctl daemon-reload` after creating or editing unit files or drop-in overrides.
 
 ### Set the Default Editor

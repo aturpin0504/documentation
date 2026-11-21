@@ -3,6 +3,7 @@ layout: default
 title: Cron and At Service Management
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 10
 ---
 
 # Cron and At Service Management
@@ -13,12 +14,12 @@ grand_parent: RHEL
 
 ## Managing the `crond` Service
 
-| Command | Description |
+| Task | Command |
 |---|---|
-| `systemctl status crond` | Check the current status of the cron service. |
-| `systemctl status crond -l` | Show current service state with full output. |
+| Check the current status of the cron service | `systemctl status crond` |
+| Show current service state with full output | `systemctl status crond -l` |
 
-> [!NOTE]
+{: .note }
 > `crond` wakes up every minute to check its configuration. Configuration changes do not normally require a service reload or restart.
 
 ## Cron Configuration Locations
@@ -35,16 +36,16 @@ grand_parent: RHEL
 
 ## Managing User Cron Jobs
 
-| Command | Description |
+| Task | Command |
 |---|---|
-| `crontab -e` | Edit the current user's cron jobs. |
-| `crontab -e -u username` | Edit a specific user's cron jobs; run as root. |
-| `crontab -l` | List the current user's cron jobs. |
-| `crontab -l -u username` | List a specific user's cron jobs. |
-| `crontab -r` | Remove the current user's crontab. |
-| `crontab -r -u username` | Remove a specific user's crontab; run as root. |
+| Edit the current user's cron jobs | `crontab -e` |
+| Edit a specific user's cron jobs; run as root | `crontab -e -u username` |
+| List the current user's cron jobs | `crontab -l` |
+| List a specific user's cron jobs | `crontab -l -u username` |
+| Remove the current user's crontab | `crontab -r` |
+| Remove a specific user's crontab; run as root | `crontab -r -u username` |
 
-> [!WARNING]
+{: .warning }
 > `crontab -r` deletes the crontab without opening an editor. Verify the intended user before running it.
 
 ## Cron Job Format
@@ -112,7 +113,7 @@ MAILTO=admin@example.com
 | `/etc/cron.allow` | If present, users must be listed in this file to use `cron`. |
 | `/etc/cron.deny` | If present, users listed in this file are denied use of `cron`. |
 
-> [!NOTE]
+{: .note }
 > `/etc/cron.allow` and `/etc/cron.deny` should not both exist simultaneously. If neither file exists, only `root` can use `cron`.
 
 ## Cron Operational Tips
@@ -145,21 +146,21 @@ The `at` service schedules commands to run once at a specified time.
 
 ## Managing the `atd` Service
 
-| Command | Description |
+| Task | Command |
 |---|---|
-| `systemctl status atd` | Check the `atd` service status. |
+| Check the `atd` service status | `systemctl status atd` |
 
 ## `at` Commands
 
-| Command | Description |
+| Task | Command |
 |---|---|
-| `at 15:00` | Schedule a job for 3:00 PM. |
-| `at teatime` | Schedule a job for 4:00 PM. |
-| `at noon` | Schedule a job for noon. |
-| `at tomorrow` | Schedule a job for tomorrow. |
-| `atq` | View scheduled `at` jobs. |
-| `atrm jobnumber` | Remove a scheduled job. |
-| `batch` | Execute a job when system load permits; typically below `0.8`. |
+| Schedule a job for 3:00 PM | `at 15:00` |
+| Schedule a job for 4:00 PM | `at teatime` |
+| Schedule a job for noon | `at noon` |
+| Schedule a job for tomorrow | `at tomorrow` |
+| View scheduled `at` jobs | `atq` |
+| Remove a scheduled job | `atrm jobnumber` |
+| Execute a job when system load permits; typically below `0.8` | `batch` |
 
 ## Using `at`
 

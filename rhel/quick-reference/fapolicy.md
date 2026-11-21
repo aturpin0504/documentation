@@ -3,6 +3,7 @@ layout: default
 title: "fapolicyd: File Access Policy Daemon"
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 18
 ---
 
 # fapolicyd: File Access Policy Daemon
@@ -15,7 +16,7 @@ grand_parent: RHEL
 
 Applications are generally trusted when they are properly installed through the system package manager and registered in the RPM database. `fapolicyd` uses the RPM database as a source of trusted binaries and scripts, while the `fapolicyd` RPM plugin tracks DNF/RPM-managed updates and notifies the daemon of relevant database changes. 
 
-> [!NOTE]
+{: .note }
 > When RHEL is deployed using a DISA security profile, verify whether `fapolicyd` has already been installed and configured by the applicable baseline or automation before making changes.
 
 ## Configuration Files
@@ -32,7 +33,7 @@ The `fagenrules` utility merges rule files from `/etc/fapolicyd/rules.d/` into `
 
 ## Rule Order
 
-> [!IMPORTANT]
+{: .important }
 > Rule files in `/etc/fapolicyd/rules.d/` are processed in numerical filename order. Rules are evaluated in order, so custom allow rules must appear before a matching deny rule.
 
 Example order:
@@ -283,7 +284,7 @@ allow perm=execute all : dir=/var/satellite/
 
 This permits any process to execute files under `/var/satellite/` without requiring trust validation for those target files.
 
-> [!WARNING]
+{: .warning }
 > The simple `all : dir=/path/` rule is broad. Use more restrictive rules with source executable and trust conditions for sensitive paths whenever practical.
 
 ## Choosing a Rule Type

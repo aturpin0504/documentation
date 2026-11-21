@@ -3,6 +3,7 @@ layout: default
 title: Kernel Information and Management
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 19
 ---
 
 # Kernel Information and Management
@@ -27,9 +28,9 @@ grand_parent: RHEL
 | Task | Command |
 |---|---|
 | View recent kernel messages | `dmesg` |
-| View kernel messages with a pager | `dmesg \| less` |
+| View kernel messages with a pager | <code>dmesg &#124; less</code> |
 | View kernel messages from the journal | `journalctl -k` |
-| Check whether the kernel is tainted | `dmesg \| grep -i taint` |
+| Check whether the kernel is tainted | <code>dmesg &#124; grep -i taint</code> |
 
 Examples:
 
@@ -67,7 +68,7 @@ dmesg | grep -i taint
   options cdrom debug=1
   ```
 
-> [!TIP]
+{: .tip }
 > Use `modprobe` rather than `insmod` or `rmmod`. `modprobe` handles module dependencies automatically.
 
 ## Kernel Updates and Reboot Checks

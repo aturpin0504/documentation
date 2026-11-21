@@ -3,6 +3,7 @@ layout: default
 title: firewalld Management
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 14
 ---
 
 # firewalld Management
@@ -68,7 +69,7 @@ The default zone is commonly `public` unless changed.
 
 At firewalld startup, the permanent configuration becomes the runtime configuration. A reload also replaces runtime-only settings with the permanent configuration. 
 
-> [!IMPORTANT]
+{: .important }
 > Use `--permanent` for changes that must survive reboot or firewalld restart, then run `firewall-cmd --reload`.
 
 ## Zone Management
@@ -83,7 +84,7 @@ At firewalld startup, the permanent configuration becomes the runtime configurat
 | Show all zone configurations | `firewall-cmd --list-all-zones` |
 | Show active zones with interfaces and sources | `firewall-cmd --get-active-zones` |
 
-> [!NOTE]
+{: .note }
 > Setting the default zone with `firewall-cmd --set-default-zone` updates the default-zone setting without requiring `--permanent`. 
 
 ## Service Management
@@ -133,7 +134,7 @@ At firewalld startup, the permanent configuration becomes the runtime configurat
 | Reload permanent configuration into the runtime configuration | `firewall-cmd --reload` |
 | Restart firewalld completely | `systemctl restart firewalld` |
 
-> [!WARNING]
+{: .warning }
 > `firewall-cmd --reload` and `systemctl restart firewalld` discard runtime-only changes that were not also saved with `--permanent`. 
 
 ## Common Workflows

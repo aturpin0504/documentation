@@ -3,13 +3,14 @@ layout: default
 title: "Package & Satellite Management"
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 7
 ---
 
 # Package and Satellite Management
 
 Daily package management with `dnf` and `rpm`, module streams, custom repositories, STIG-aligned GPG signing, and Red Hat Satellite 6.19 maintenance.
 
-> [!NOTE]
+{: .note }
 > On RHEL 8 and RHEL 9, `yum` is a symbolic link to `dnf`; therefore, `yum` and `dnf` package-management commands use the same underlying tooling. This guide uses `dnf` as the primary command.
 
 ## Satellite Server Registration and Required Repositories
@@ -171,7 +172,7 @@ sslverify=1
 | `gpgkey` | Location of the public GPG key used to verify package signatures. |
 | `sslverify` | `1` validates the repository server certificate; `0` skips TLS certificate validation. |
 
-> [!WARNING]
+{: .warning }
 > Do not disable `gpgcheck` or `sslverify` unless specifically authorized by organizational policy and the associated risk has been accepted. Prefer signed packages and validated TLS certificates.
 
 ### Satellite Repository Management
@@ -184,7 +185,7 @@ In a Satellite-managed environment:
 
 ## STIG-Aligned GPG Keys and Custom Package Signing
 
-> [!WARNING]
+{: .warning }
 > ### FIPS and STIG Key-Type Requirement
 >
 > RHEL systems operating in FIPS mode and DISA STIG-aligned environments should not use Ed25519 (EdDSA) GPG keys for RPM package signing. Use RSA keys, such as RSA 4096-bit keys, for package-signing workflows.
@@ -254,7 +255,7 @@ createrepo_c /path/to/repo
 
 ## Exporting and Importing a Private GPG Key
 
-> [!WARNING]
+{: .warning }
 > A private GPG key can sign packages as its associated identity. Export it only when necessary for an authorized backup, recovery, or controlled key migration. Store and transfer the export only through an approved protected method, and do not place it in a repository, shared directory, ticket, email, or other unprotected location. GnuPG specifically warns that exporting secret keys creates security risk if they are transmitted insecurely. 
 
 ### Identify the Key to Export
@@ -343,7 +344,7 @@ After confirming the destination server can sign packages and the export is reta
 rm -f RPM-GPG-KEY-custom-private.asc ownertrust.txt
 ```
 
-> [!NOTE]
+{: .note }
 > The GPG passphrase remains necessary to use a protected private key after import. Verify the key fingerprint through an independent authorized channel before using it to sign production RPMs.
 
 ## Package Management with `dnf`
@@ -380,7 +381,7 @@ rm -f RPM-GPG-KEY-custom-private.asc ownertrust.txt
 | List available updates | `dnf list updates` |
 | List available packages matching a pattern | `dnf list available <pattern>` |
 | List installed packages matching a pattern | `dnf list installed <pattern>` |
-| Quickly search locally installed RPMs | `rpm -qa \| grep <pattern>` |
+| Quickly search locally installed RPMs | <code>rpm -qa &#124; grep &lt;pattern&gt;</code> |
 | List files installed by a package | `rpm -ql <pkg>` |
 | List package files through repository metadata | `dnf repoquery -l <package-name>` |
 | Show package dependencies | `dnf repoquery --requires <package-name>` |
@@ -416,7 +417,7 @@ Application Streams allow selection among major software versions, such as PHP o
 | Stream | A major version within a module, such as `php:8.2`. |
 | Profile | A package collection for a use case, such as `common`, `minimal`, or `devel`. |
 
-> [!NOTE]
+{: .note }
 > Only one stream can be active for a module at a time.
 
 ### Manage a PHP Module Stream
@@ -477,7 +478,7 @@ Use `dnf` for most package-management tasks because it resolves dependencies and
 
 ## Satellite Server Updates
 
-> [!IMPORTANT]
+{: .important }
 > Do not use direct `dnf update` for Satellite server updates when Satellite documentation and maintenance tooling require `satellite-maintain`. Direct updates can affect Satellite dependencies.
 
 Use `satellite-maintain` for Satellite server health checks and package updates:

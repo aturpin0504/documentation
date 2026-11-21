@@ -3,6 +3,7 @@ layout: default
 title: Network Fundamentals
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 12
 ---
 
 # Network Fundamentals
@@ -38,7 +39,7 @@ grand_parent: RHEL
 | `-n` | Do not resolve service or host names |
 | `-a` | Show all sockets |
 
-> [!WARNING]
+{: .warning }
 > Do not use `ifconfig` on RHEL 8. Use the `ip` command instead.
 
 ## NetworkManager
@@ -50,7 +51,7 @@ grand_parent: RHEL
 | Open the NetworkManager text user interface | `nmtui` |
 | Apply connection changes without restarting the interface | `nmcli device reapply ens192` |
 
-> [!NOTE]
+{: .note }
 > Replace `ens192` with the applicable interface name.
 
 ### `nmtui` Options
@@ -101,7 +102,7 @@ Example:
 10.0.0.10 server1.example.com server1
 ```
 
-> [!WARNING]
+{: .warning }
 > Do not edit `/etc/resolv.conf` directly. NetworkManager can overwrite the file. Use `nmtui` or `nmcli` to manage DNS settings.
 
 ## Login Messages
@@ -168,11 +169,11 @@ systemctl reload sshd
 | Task | Command |
 |---|---|
 | Verify that `sshd` is running | `systemctl status sshd` |
-| Check whether port 22 is listening | `ss -tlnp \| grep :22` |
+| Check whether port 22 is listening | <code>ss -tlnp &#124; grep :22</code> |
 | Check firewall rules | `firewall-cmd --list-all` |
 | Monitor SSH authentication attempts | `tail -f /var/log/secure` |
 | Follow `sshd` journal logs | `journalctl -u sshd -f` |
-| Show IPv4 addresses | `ip a \| grep 'inet '` |
+| Show IPv4 addresses | <code>ip a &#124; grep 'inet '</code> |
 
 ## SFTP File Transfer
 
@@ -182,18 +183,18 @@ systemctl reload sshd
 - **Remote:** The SSH server to which you are connected.
 - Commands beginning with `l` operate on the local system.
 
-| Command | Description |
+| Task | Command |
 |---|---|
-| `put file` | Upload a file to the remote system. |
-| `get file` | Download a file from the remote system. |
-| `get -r directory` | Download a directory recursively. |
-| `ls` | List the remote directory. |
-| `lls` | List the local directory. |
-| `cd dir` | Change the remote directory. |
-| `lcd dir` | Change the local directory. |
-| `pwd` | Show the remote working directory. |
-| `lpwd` | Show the local working directory. |
-| `quit` | Exit the SFTP session. |
+| Upload a file to the remote system | `put file` |
+| Download a file from the remote system | `get file` |
+| Download a directory recursively | `get -r directory` |
+| List the remote directory | `ls` |
+| List the local directory | `lls` |
+| Change the remote directory | `cd dir` |
+| Change the local directory | `lcd dir` |
+| Show the remote working directory | `pwd` |
+| Show the local working directory | `lpwd` |
+| Exit the SFTP session | `quit` |
 
 ## `tmux`: Terminal Multiplexer
 

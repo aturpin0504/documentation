@@ -3,6 +3,7 @@ layout: default
 title: SSH Basic Hardening
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 13
 ---
 
 # SSH Basic Hardening
@@ -51,7 +52,7 @@ sshd -t
 systemctl restart sshd
 ```
 
-> [!WARNING]
+{: .warning }
 > Keep an existing SSH session open while changing SSH configuration. Test a new connection before closing the original session.
 
 ## Changing the SSH Port
@@ -138,7 +139,7 @@ For SecureCRT, PuTTY, MobaXterm, or similar clients:
 6. Test key-based authentication in a separate SSH session.
 7. Disable password authentication only after key-based login has been verified.
 
-> [!NOTE]
+{: .note }
 > On FIPS-enabled systems, do not use Ed25519 keys. Use RSA or another organization-approved FIPS-compatible key type. Red Hat documentation specifically identifies RSA and ECDSA as alternatives when Ed25519 is not appropriate for FIPS-based deployments. 
 
 ### Common SSH Key Permission Issues
@@ -164,9 +165,9 @@ Additional requirements:
 | Show SSH logs since last boot | `journalctl -u sshd -b` |
 | Show SSH logs from the past hour | `journalctl -u sshd --since "1 hour ago"` |
 | Monitor authentication log on applicable systems | `tail -f /var/log/secure` |
-| Check SELinux SSH port labels | `semanage port -l \| grep ssh` |
-| Verify SSH is listening on port 22 | `ss -tlnp \| grep :22` |
-| Verify SSH is listening on port 2022 | `ss -tlnp \| grep :2022` |
+| Check SELinux SSH port labels | <code>semanage port -l &#124; grep ssh</code> |
+| Verify SSH is listening on port 22 | <code>ss -tlnp &#124; grep :22</code> |
+| Verify SSH is listening on port 2022 | <code>ss -tlnp &#124; grep :2022</code> |
 
 For STIG-hardened systems, use `journalctl -u sshd` and the audit logs as the primary sources for SSH troubleshooting when authentication events are not written to `/var/log/secure`.
 

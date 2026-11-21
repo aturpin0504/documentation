@@ -3,6 +3,7 @@ layout: default
 title: Process Management and Performance Tuning
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 6
 ---
 
 # Process Management and Performance Tuning
@@ -23,7 +24,7 @@ grand_parent: RHEL
 | Show all processes with CPU and memory usage | `ps aux` |
 | Show all processes with parent process IDs | `ps -ef` |
 | Show process hierarchy in tree format | `ps fax` |
-| Filter processes | `ps aux \| grep httpd` |
+| Filter processes | <code>ps aux &#124; grep httpd</code> |
 | Find process IDs by name | `pgrep dd` |
 
 ### `ps aux` vs. `ps -ef`
@@ -75,7 +76,7 @@ Use the command that provides the columns needed for the task.
 | Kill by name or pattern | `pkill dd` |
 | Kill all processes for a user | `pkill -u username` |
 
-> [!WARNING]
+{: .warning }
 > `kill -9` sends `SIGKILL`, which can cause data loss and does not allow the process to perform cleanup actions. Always try `kill` or `kill -15` first.
 
 ## `top`: Interactive Process Monitor
@@ -104,7 +105,7 @@ top
 |---|---|
 | Show load average for 1, 5, and 15 minutes | `uptime` |
 | Show logged-in users, uptime, and load average | `w` |
-| Show CPU core count | `lscpu \| grep "^CPU(s)"` |
+| Show CPU core count | <code>lscpu &#124; grep "^CPU(s)"</code> |
 
 ### Understanding Load Average
 

@@ -3,6 +3,7 @@ layout: default
 title: File Ownership and Permissions
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 5
 ---
 
 # File Ownership and Permissions
@@ -151,7 +152,7 @@ ACLs provide more granular permissions than the standard user/group/other permis
 | `o::perms` | Others ACL |
 | `d:` prefix | Default ACL for newly created content in a directory |
 
-> [!NOTE]
+{: .note }
 > `ls -l` displays a `+` after the normal permission bits when ACLs are present.
 
 Example:

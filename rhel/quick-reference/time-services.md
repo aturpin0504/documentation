@@ -3,6 +3,7 @@ layout: default
 title: Time Synchronization with timedatectl and Chrony
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 11
 ---
 
 # Time Synchronization with `timedatectl` and Chrony
@@ -25,7 +26,7 @@ timedatectl set-ntp 1
 date -d @1732032000
 ```
 
-> [!NOTE]
+{: .note }
 > The timezone is a local display setting and is normally configured once during server setup. NTP synchronizes system time; it does not change the configured timezone.
 
 ## Chrony Service Management

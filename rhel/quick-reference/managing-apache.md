@@ -3,6 +3,7 @@ layout: default
 title: Managing Apache HTTP Services
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 15
 ---
 
 # Managing Apache HTTP Services
@@ -15,7 +16,7 @@ grand_parent: RHEL
 | Install SSL/TLS module | `dnf install mod_ssl` |
 | Check FIPS mode status | `fips-mode-setup --check` |
 
-> [!NOTE]
+{: .note }
 > If FIPS mode is enabled, TLS configuration must align with the system cryptographic policy and organizational requirements. Verify FIPS mode before configuring certificates, ciphers, or TLS protocols. RHEL provides TLS configuration through the `mod_ssl` package and its associated configuration files. 
 
 ## Apache Service Management
@@ -28,7 +29,7 @@ grand_parent: RHEL
 
 ## Configuration Files and Directories
 
-> [!NOTE]
+{: .note }
 > Apache configuration paths are relative to the `ServerRoot`, typically `/etc/httpd`.
 
 | Location | Purpose |
@@ -192,7 +193,7 @@ chown apache:apache /var/www/site1/uploads
 chmod 755 /var/www/site1/uploads
 ```
 
-> [!WARNING]
+{: .warning }
 > Limit Apache write access to only the specific directories that require it. Do not make the entire `DocumentRoot` writable by Apache unless required by the application design.
 
 ### Virtual Host Configuration Parameters
@@ -215,12 +216,12 @@ chmod 755 /var/www/site1/uploads
 | `SSLCertificateKeyFile` | `/etc/pki/tls/private/server.key` | Server private-key location. |
 | `SSLCACertificateFile` | `/etc/pki/tls/certs/ca-bundle.crt` | CA chain certificate location. |
 
-> [!IMPORTANT]
+{: .important }
 > Do not assume that a fixed cipher-suite string is valid for every RHEL release, FIPS configuration, or organizational baseline. Validate `SSLProtocol` and `SSLCipherSuite` settings against the current RHEL system-wide cryptographic policy and applicable security guidance. 
 
 ## HTTPS Virtual Host Example
 
-> [!NOTE]
+{: .note }
 > Name-based virtual hosts can support TLS through Server Name Indication (SNI). Use IP-based virtual hosts only when required by the applicable architecture, client compatibility requirements, or organizational baseline.
 
 ```apache
@@ -315,7 +316,7 @@ tail -f /var/log/httpd/error_log
 | Test local HTTP | `curl http://localhost` |
 | Test local HTTPS without certificate validation | `curl -k https://localhost` |
 | Test HTTPS with certificate validation | `curl https://secure.example.com` |
-| Check listening ports | `ss -tlnp \| grep httpd` |
+| Check listening ports | <code>ss -tlnp &#124; grep httpd</code> |
 
 ## Firewall Configuration
 
@@ -347,7 +348,7 @@ firewall-cmd --list-services
 | Test configuration syntax | `httpd -t` |
 | Show virtual-host configuration | `httpd -S` |
 | Check service status | `systemctl status httpd` |
-| Check Apache processes | `ps aux \| grep httpd` |
+| Check Apache processes | <code>ps aux &#124; grep httpd</code> |
 | View certificate details from a server | `openssl s_client -connect server:443 -showcerts` |
 
 ## PHP Troubleshooting

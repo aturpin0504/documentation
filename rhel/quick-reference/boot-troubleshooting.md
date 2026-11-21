@@ -3,6 +3,7 @@ layout: default
 title: Boot Procedure and Troubleshooting
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 20
 ---
 
 # Boot Procedure and Troubleshooting
@@ -40,7 +41,7 @@ grand_parent: RHEL
 3. Add the required boot arguments to the end of that line.
 4. Press `Ctrl-X` to boot with the modified arguments.
 
-> [!NOTE]
+{: .note }
 > Boot arguments entered through the GRUB menu are temporary. To make changes persistent, update the appropriate GRUB configuration source, such as `/etc/default/grub`, and regenerate GRUB configuration as required.
 
 ## Troubleshooting Boot Options
@@ -55,7 +56,7 @@ grand_parent: RHEL
 
 ## Authorized Root Password Recovery Procedure
 
-> [!WARNING]
+{: .warning }
 > Perform password-recovery actions only on systems you are authorized to administer. Changing the root password affects system access and may require coordination with the system owner or security staff.
 
 1. At the GRUB boot menu, press `e` and add `rd.break` to the end of the `linux` line.
@@ -145,7 +146,7 @@ vi /etc/fstab
 reboot
 ```
 
-> [!TIP]
+{: .tip }
 > Test `/etc/fstab` changes with `mount -a` before rebooting whenever possible.
 
 ## Boot Phase Troubleshooting Reference

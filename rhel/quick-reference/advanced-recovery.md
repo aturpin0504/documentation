@@ -3,12 +3,13 @@ layout: default
 title: Advanced Recovery
 parent: Quick Reference
 grand_parent: RHEL
+nav_order: 21
 ---
 
-> [!NOTE]
-> These procedures are uncommon in daily operations and extremely rare in VM environments. Keep them for reference, but they are unlikely to be needed regularly.
-
 # Rescue Boot and GRUB Recovery
+
+{: .note }
+> These procedures are uncommon in daily operations and extremely rare in VM environments. Keep them for reference, but they are unlikely to be needed regularly.
 
 ## Rescue Boot Options
 
