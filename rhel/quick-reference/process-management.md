@@ -117,8 +117,8 @@ top
 # Show load average for 1, 5, and 15 minutes
 uptime
 
-# Show logged-in users, uptime, and load average
-w
+# Show logged-in users, uptime, and load average (use w -u after sudo or su)
+w -u
 
 # Show CPU core count
 lscpu | grep "^CPU(s)"
@@ -151,39 +151,3 @@ renice -n 5 -p 1234
 # Change priority by process name
 renice -n 5 $(pgrep dd)
 ```
-
-## `tuned`: Performance Tuning
-
-```bash
-# Show available profiles
-tuned-adm list
-
-# Show active profile
-tuned-adm active
-
-# Show recommended profile
-tuned-adm recommend
-
-# Set a profile (persists across reboots)
-tuned-adm profile virtual-guest
-
-# Enable and start tuned
-systemctl enable --now tuned
-
-# Stop tuned
-systemctl stop tuned
-```
-
-### Common `tuned` Profiles
-
-| Profile | Purpose |
-|---|---|
-| `balanced` | Default balance between power usage and performance. |
-| `desktop` | Optimized for interactive desktop applications. |
-| `throughput-performance` | Optimized for maximum throughput (common for servers). |
-| `latency-performance` | Optimized for low-latency, time-sensitive applications. |
-| `powersave` | Optimized for maximum power savings. |
-| `virtual-guest` | Optimized for virtual machines. |
-| `virtual-host` | Optimized for KVM hypervisors. |
-
-Prefer `tuned` profiles over manual kernel-parameter tuning when an appropriate profile meets the operational requirement.
