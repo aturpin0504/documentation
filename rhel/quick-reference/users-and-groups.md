@@ -44,6 +44,42 @@ useradd -m -G sales,ops linda
 | `-d dir` | Specify the home directory. |
 | `-r` | Create a system account. |
 
+### Modifying `useradd` Defaults
+
+```bash
+# View current defaults
+useradd -D
+
+# Change default shell for newly created users
+useradd -D -s /sbin/nologin
+
+# Change default home-directory base
+useradd -D -b /home
+```
+
+### Default Configuration Files
+
+| File or Directory | Purpose |
+|---|---|
+| `/etc/default/useradd` | Default values used by `useradd`, including `SHELL`, `HOME`, `INACTIVE`, `SKEL`, and `CREATE_MAIL_SPOOL`. |
+| `/etc/skel/` | Template files, such as `.bashrc` and `.bash_profile`, copied into newly created user home directories. |
+| `/etc/login.defs` | System-wide defaults for user creation, UID/GID ranges, `UMASK`/`HOME_MODE`, and password aging. |
+
+{: .note }
+> When `useradd -m` creates a home directory, the directory's mode comes from `HOME_MODE` or `UMASK` in `/etc/login.defs`, but files copied from `/etc/skel/` **preserve their source permissions** from `/etc/skel/`. Because package defaults often leave `/etc/skel/.bash*` at `0644`, restrict `/etc/skel/` permissions (and remediate existing users) to meet STIG requirements.
+
+```bash
+# Restrict /etc/skel template files for future users (adjust to 0600 or 0640 per STIG)
+chmod 0600 /etc/skel/.bash*
+
+# Verify /etc/login.defs home directory permission settings
+grep -E '^(UMASK|HOME_MODE)' /etc/login.defs
+
+# Remediate existing user home directories and initialization files
+chmod 0700 /home/*
+chmod 0600 /home/*/.bash*
+```
+
 ### Modify Users
 
 ```bash
@@ -259,44 +295,6 @@ Example:
 
 ```ini
 #enforce_for_root
-```
-
-## Modifying `useradd` Defaults
-
-### View and Change Defaults
-
-```bash
-# View current defaults
-useradd -D
-
-# Change default shell for newly created users
-useradd -D -s /sbin/nologin
-
-# Change default home-directory base
-useradd -D -b /home
-```
-
-### Default Configuration Files
-
-| File or Directory | Purpose |
-|---|---|
-| `/etc/default/useradd` | Default values used by `useradd`, including `SHELL`, `HOME`, `INACTIVE`, `SKEL`, and `CREATE_MAIL_SPOOL`. |
-| `/etc/skel/` | Template files, such as `.bashrc` and `.bash_profile`, copied into newly created user home directories. |
-| `/etc/login.defs` | System-wide defaults for user creation, UID/GID ranges, `UMASK`/`HOME_MODE`, and password aging. |
-
-{: .note }
-> When `useradd -m` creates a home directory, the directory's mode comes from `HOME_MODE` or `UMASK` in `/etc/login.defs`, but files copied from `/etc/skel/` **preserve their source permissions** from `/etc/skel/`. Because package defaults often leave `/etc/skel/.bash*` at `0644`, restrict `/etc/skel/` permissions (and remediate existing users) to meet STIG requirements.
-
-```bash
-# Restrict /etc/skel template files for future users (adjust to 0600 or 0640 per STIG)
-chmod 0600 /etc/skel/.bash*
-
-# Verify /etc/login.defs home directory permission settings
-grep -E '^(UMASK|HOME_MODE)' /etc/login.defs
-
-# Remediate existing user home directories and initialization files
-chmod 0700 /home/*
-chmod 0600 /home/*/.bash*
 ```
 
 ## Group Management
