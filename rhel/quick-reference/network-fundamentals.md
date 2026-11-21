@@ -46,7 +46,7 @@ ss -tul
 | `-a` | Show all sockets |
 
 {: .warning }
-> Do not use `ifconfig` on RHEL 8+. Use the `ip` command instead.
+> Do not use `ifconfig`. Use the `ip` command instead.
 
 ## NetworkManager
 
@@ -70,7 +70,7 @@ In `nmtui`, you can **Edit a Connection**, **Activate a Connection**, or **Set S
 
 | File | Purpose |
 |---|---|
-| `/etc/sysconfig/network-scripts/ifcfg-*` | Network connection configuration files (RHEL 8; RHEL 9 uses `/etc/NetworkManager/system-connections/`). |
+| `/etc/NetworkManager/system-connections/` | NetworkManager connection keyfiles (legacy `ifcfg-*` files in `/etc/sysconfig/network-scripts/` on RHEL 8). |
 | `/etc/hostname` | System hostname. |
 | `/etc/hosts` | Static hostname-to-IP mappings. |
 | `/etc/resolv.conf` | DNS configuration; typically auto-generated. |

@@ -10,7 +10,7 @@ nav_order: 13
 
 ## SSH Server Configuration
 
-The main SSH server configuration file is `/etc/ssh/sshd_config`. On RHEL 9 and later, drop-in files under `/etc/ssh/sshd_config.d/` are also supported and are preferable for locally managed settings.
+The main SSH server configuration file is `/etc/ssh/sshd_config`. Where supported, drop-in files under `/etc/ssh/sshd_config.d/` are preferable for locally managed settings.
 
 ### Useful `sshd_config` Options
 

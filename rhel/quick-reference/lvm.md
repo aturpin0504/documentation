@@ -16,7 +16,7 @@ nav_order: 16
 | **Volume Group (VG)** | A pool of storage created from one or more physical volumes. |
 | **Logical Volume (LV)** | A virtual partition created from available space in a volume group. |
 
-LVM is the default storage configuration for many RHEL 8+ installations (commonly used for `/` and swap, but not `/boot`) and supports online resizing and adding capacity.
+LVM is the default storage configuration for many RHEL installations (commonly used for `/` and swap, but not `/boot`) and supports online resizing and adding capacity.
 
 ## Viewing Storage
 
@@ -141,7 +141,7 @@ lvremove /dev/vgdata/lvdata
 
 | Type | Description |
 |---|---|
-| `xfs` | Default file system type in RHEL 8+; can grow but cannot shrink. |
+| `xfs` | Default file system type in RHEL; can grow but cannot shrink. |
 | `ext4` | Can grow and shrink; shrinking requires the file system to be unmounted. |
 | `tmpfs` | Temporary file system stored in RAM. |
 | `swap` | Virtual memory swap space. |

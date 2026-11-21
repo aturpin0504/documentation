@@ -11,7 +11,7 @@ nav_order: 7
 Daily package management with `dnf` and `rpm`, module streams, custom repositories, STIG-aligned GPG signing, and Red Hat Satellite 6.19 maintenance.
 
 {: .note }
-> On RHEL 8 and RHEL 9, `yum` is a symbolic link to `dnf`; therefore, `yum` and `dnf` package-management commands use the same underlying tooling. This guide uses `dnf` as the primary command.
+> This guide uses `dnf` as the primary package-management command (`yum` is a symlink to `dnf` on systems where it is present).
 
 ## Satellite Server Registration and Required Repositories
 
@@ -142,8 +142,8 @@ gpg --armor --export "admin@example.com" > RPM-GPG-KEY-custom
 echo '%_gpg_name admin@example.com' >> ~/.rpmmacros
 
 # 4. Sign and verify custom RPMs
-rpmsign --addsign /path/to/my-package-1.0-1.el9.x86_64.rpm
-rpm -K /path/to/my-package-1.0-1.el9.x86_64.rpm
+rpmsign --addsign /path/to/my-package-1.0-1.x86_64.rpm
+rpm -K /path/to/my-package-1.0-1.x86_64.rpm
 ```
 
 ### Trust the Public Key on Hosts & Standalone Repos
@@ -196,8 +196,8 @@ gpg --import-ownertrust ownertrust.txt
 # Verify fingerprint and test signing
 gpg --list-secret-keys --keyid-format LONG
 gpg --fingerprint "admin@example.com"
-rpmsign --addsign /path/to/my-package-1.0-1.el9.x86_64.rpm
-rpm -K /path/to/my-package-1.0-1.el9.x86_64.rpm
+rpmsign --addsign /path/to/my-package-1.0-1.x86_64.rpm
+rpm -K /path/to/my-package-1.0-1.x86_64.rpm
 
 # Securely remove temporary export files
 rm -f RPM-GPG-KEY-custom-private.asc ownertrust.txt
@@ -319,8 +319,6 @@ rpm -K package.rpm
 ```
 
 ## Transaction History
-
-`dnf history` and `yum history` are equivalent on RHEL 8 and RHEL 9.
 
 ```bash
 dnf history

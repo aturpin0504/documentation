@@ -32,7 +32,7 @@ date -d @1732032000
 
 ## Chrony Service Management
 
-Starting with RHEL 8, NTP synchronization is implemented by the `chronyd` daemon, provided by the `chrony` package.
+NTP synchronization is implemented by the `chronyd` daemon, provided by the `chrony` package.
 
 ```bash
 # Check Chrony service status

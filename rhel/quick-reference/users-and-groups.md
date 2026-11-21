@@ -31,6 +31,19 @@ useradd -r -s /sbin/nologin svc_app
 useradd -m -G sales,ops linda
 ```
 
+### Common `useradd` Options
+
+| Option | Description |
+|---|---|
+| `-m` | Create the user's home directory. |
+| `-u UID` | Specify the user ID. |
+| `-G groups` | Assign secondary groups. |
+| `-g GID` | Specify the primary group. |
+| `-c comment` | Set the GECOS comment field. |
+| `-s shell` | Specify the login shell. |
+| `-d dir` | Specify the home directory. |
+| `-r` | Create a system account. |
+
 ### Modify Users
 
 ```bash
@@ -49,6 +62,9 @@ usermod -L jsmith
 usermod -U jsmith
 ```
 
+{: .important }
+> `usermod -aG` **appends** groups. Using `usermod -G` without `-a` replaces the user's existing secondary-group memberships.
+
 ### Delete Users
 
 ```bash
@@ -62,31 +78,30 @@ userdel -r jsmith
 userdel -f jsmith
 ```
 
-### Common `useradd` Options
-
-| Option | Description |
-|---|---|
-| `-m` | Create the user's home directory. |
-| `-u UID` | Specify the user ID. |
-| `-G groups` | Assign secondary groups. |
-| `-g GID` | Specify the primary group. |
-| `-c comment` | Set the GECOS comment field. |
-| `-s shell` | Specify the login shell. |
-| `-d dir` | Specify the home directory. |
-| `-r` | Create a system account. |
-
-{: .important }
-> `usermod -aG` **appends** groups. Using `usermod -G` without `-a` replaces the user's existing secondary-group memberships.
-
 ### Restrict User Login
 
 ```bash
 # Set one user's shell to nologin
 usermod -s /sbin/nologin username
 
+# Fully lock an account (blocks both password and SSH key logins)
+usermod -L -e 1 -s /sbin/nologin username
+
+# Restore a fully locked account
+usermod -U -e "" -s /bin/bash username
+
 # Prevent non-root users from logging in
 touch /etc/nologin
 ```
+
+| Method | What It Modifies | Blocks Password Login? | Blocks SSH Key Login? |
+|---|---|---|---|
+| `usermod -L` / `passwd -l` | Prepends `!` to password hash in `/etc/shadow` | Yes | **No** |
+| `usermod -e 1` / `chage -E 0` | Sets account expiration date in `/etc/shadow` to the past | Yes | **Yes** |
+| `usermod -s /sbin/nologin` | Changes login shell in `/etc/passwd` | Yes (interactive) | Yes (interactive) |
+
+{: .warning }
+> `usermod -L` and `passwd -l` only lock the **password**—a user with an SSH key in `~/.ssh/authorized_keys` can still log in. Use `usermod -e 1` (or `chage -E 0`) to block all logins, including SSH keys.
 
 {: .note }
 > Users attempting to log in while `/etc/nologin` exists will see the file's contents.
@@ -165,7 +180,7 @@ To permit key- or smart-card-based SSH logins despite password expiration, updat
 - `/etc/pam.d/password-auth`
 - `/etc/pam.d/system-auth`
 
-For RHEL 8 and RHEL 9 systems using `authselect`, make the change in a **custom authselect profile** rather than editing PAM files directly.
+On systems using `authselect`, make the change in a **custom authselect profile** rather than editing PAM files directly.
 
 Current account rule:
 
@@ -221,7 +236,7 @@ PASS_WARN_AGE   7    # Warning days before expiration
 
 ### Password History
 
-On RHEL 9, password-history settings are commonly configured in:
+Password-history settings are commonly configured in:
 
 ```text
 /etc/security/pwhistory.conf
@@ -267,7 +282,22 @@ useradd -D -b /home
 |---|---|
 | `/etc/default/useradd` | Default values used by `useradd`, including `SHELL`, `HOME`, `INACTIVE`, `SKEL`, and `CREATE_MAIL_SPOOL`. |
 | `/etc/skel/` | Template files, such as `.bashrc` and `.bash_profile`, copied into newly created user home directories. |
-| `/etc/login.defs` | System-wide defaults for user creation, UID/GID ranges, UMASK, and password aging. |
+| `/etc/login.defs` | System-wide defaults for user creation, UID/GID ranges, `UMASK`/`HOME_MODE`, and password aging. |
+
+{: .note }
+> When `useradd -m` creates a home directory, the directory's mode comes from `HOME_MODE` or `UMASK` in `/etc/login.defs`, but files copied from `/etc/skel/` **preserve their source permissions** from `/etc/skel/`. Because package defaults often leave `/etc/skel/.bash*` at `0644`, restrict `/etc/skel/` permissions (and remediate existing users) to meet STIG requirements.
+
+```bash
+# Restrict /etc/skel template files for future users (adjust to 0600 or 0640 per STIG)
+chmod 0600 /etc/skel/.bash*
+
+# Verify /etc/login.defs home directory permission settings
+grep -E '^(UMASK|HOME_MODE)' /etc/login.defs
+
+# Remediate existing user home directories and initialization files
+chmod 0700 /home/*
+chmod 0600 /home/*/.bash*
+```
 
 ## Group Management
 
@@ -420,7 +450,7 @@ cp /etc/gshadow /etc/gshadow.backup
 | `/etc/skel/` | Files copied into newly created user home directories. |
 | `/etc/security/pwquality.conf` | Password-complexity requirements. |
 | `/etc/security/pwquality.conf.d/*.conf` | Drop-in password-complexity configuration files. |
-| `/etc/security/pwhistory.conf` | Password-history settings on RHEL 9. |
+| `/etc/security/pwhistory.conf` | Password-history settings (when configured separately from PAM). |
 | `/etc/security/faillock.conf` | Account-lockout thresholds and failed-login tally location. |
 | `/etc/nologin` | Prevents non-root logins when present. |
 
