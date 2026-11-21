@@ -8,14 +8,14 @@ nav_order: 7
 
 # Package and Satellite Management
 
-Daily package management with `dnf` and `rpm`, module streams, custom repositories, STIG-aligned GPG signing, and Red Hat Satellite 6.19 maintenance.
+Daily package management with `dnf` and `rpm`, module streams, custom repositories, STIG-aligned GPG signing, and Red Hat Satellite maintenance.
 
 {: .note }
 > This guide uses `dnf` as the primary package-management command (`yum` is a symlink to `dnf` on systems where it is present).
 
 ## Satellite Server Registration and Required Repositories
 
-If a Satellite 6.19 server running on RHEL 9 must be rebuilt, register it to Red Hat CDN and enable only the required repositories:
+If a Satellite server must be rebuilt, register it to Red Hat CDN and enable only the BaseOS, AppStream, Satellite, and Satellite Maintenance repositories matching your RHEL major version (`<rhel_ver>`, e.g., `9` or `10`) and Satellite version (`<sat_ver>`):
 
 ```bash
 # 1. Register the host to Red Hat
@@ -24,12 +24,15 @@ subscription-manager register --username <rh_user> --auto-attach
 # 2. Disable all repositories first to avoid conflicts
 subscription-manager repos --disable "*"
 
-# 3. Enable required RHEL 9 and Satellite 6.19 repositories
+# 3. Verify exact repository IDs for your RHEL and Satellite versions if needed
+subscription-manager repos --list | grep -E "baseos-rpms|appstream-rpms|satellite-"
+
+# 4. Enable required RHEL and Satellite repositories
 subscription-manager repos \
-  --enable=rhel-9-for-x86_64-baseos-rpms \
-  --enable=rhel-9-for-x86_64-appstream-rpms \
-  --enable=satellite-6.19-for-rhel-9-x86_64-rpms \
-  --enable=satellite-maintenance-6.19-for-rhel-9-x86_64-rpms
+  --enable=rhel-<rhel_ver>-for-x86_64-baseos-rpms \
+  --enable=rhel-<rhel_ver>-for-x86_64-appstream-rpms \
+  --enable=satellite-<sat_ver>-for-rhel-<rhel_ver>-x86_64-rpms \
+  --enable=satellite-maintenance-<sat_ver>-for-rhel-<rhel_ver>-x86_64-rpms
 ```
 
 If `satellite-maintain packages update` fails due to missing repositories or dependencies, verify all four repositories above are enabled.
