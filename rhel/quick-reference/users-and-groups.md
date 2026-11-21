@@ -319,20 +319,21 @@ groupdel appadmins
 
 ### Add or Remove Group Members
 
-```bash
-# Add a user to a group
-gpasswd -a jsmith appadmins
+In daily administration, `usermod -aG` (add) and `gpasswd -d` (remove) are the most common commands. `groupmems` is primarily used when delegating group management to non-root group administrators.
 
-# Remove a user from a group
+```bash
+# Add a user to a group (preferred daily method)
+usermod -aG appadmins jsmith
+
+# Add or remove a user using gpasswd
+gpasswd -a jsmith appadmins
 gpasswd -d jsmith appadmins
 
 # View a group and its members; works with local and AD/SSSD groups
 getent group wheel
 
-# List group members
+# List, add, or remove members using groupmems (delegated group admin tool)
 groupmems -g sales -l
-
-# Add or remove a user through groupmems
 groupmems -g sales -a linda
 groupmems -g sales -d linda
 ```
@@ -457,8 +458,11 @@ cp /etc/gshadow /etc/gshadow.backup
 ## Practical Tips
 
 - System accounts commonly use UIDs below `1000`; normal user accounts commonly use UIDs of `1000` or higher.
-- Test a user's login environment and permissions after changes:
+- Test a user's login environment and permissions after changes (when run as `root`, e.g., after `sudo -i`, `su - username` does not prompt for the user's password):
 
 ```bash
 su - username
+
+# Test permissions for an account that has /sbin/nologin set
+su -s /bin/bash - username
 ```
