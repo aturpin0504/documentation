@@ -1,6 +1,6 @@
 ---
 layout: default
-title: "User & Group Management"
+title: "Users & Groups"
 parent: Quick Reference
 grand_parent: RHEL
 nav_order: 4
@@ -85,32 +85,64 @@ userdel -f jsmith
 usermod -s /sbin/nologin username
 
 # Prevent non-root users from logging in
-touch /etc/nologin.txt
+touch /etc/nologin
 ```
 
 {: .note }
-> Users attempting to log in while `/etc/nologin.txt` exists will see the file's contents.
+> Users attempting to log in while `/etc/nologin` exists will see the file's contents.
 
 ## Password and Account Management
 
 ### Common Password Commands
 
-| Task | Command |
+```bash
+# Change your own password
+passwd
+
+# Set or change a user's password
+passwd username
+
+# Check password status and aging
+passwd -S username
+
+# Lock or unlock an account
+passwd -l username
+passwd -u username
+
+# Set password aging values (min 30, warn 3, max 90 days)
+passwd -n 30 -w 3 -x 90 linda
+```
+
+### Account Aging with `chage`
+
+```bash
+# Display password and account-expiration details
+chage -l username
+
+# Set account-expiration date
+chage -E 2025-12-31 username
+
+# Set maximum, minimum, warning, and inactive days
+chage -M 90 username
+chage -m 7 username
+chage -W 14 username
+chage -I 30 username
+
+# Set password or account to never expire
+chage -M -1 username
+chage -E -1 username
+```
+
+### Common `chage` Options
+
+| Option | Description |
 |---|---|
-| Change your password | `passwd` |
-| Set or change a user's password | `passwd username` |
-| Check password status and aging | `passwd -S username` |
-| Lock an account | `passwd -l username` |
-| Unlock an account | `passwd -u username` |
-| Display password and account-expiration details | `chage -l username` |
-| Set password aging values | `passwd -n 30 -w 3 -x 90 linda` |
-| Set account-expiration date | `chage -E 2025-12-31 username` |
-| Set maximum password age | `chage -M 90 username` |
-| Set minimum password age | `chage -m 7 username` |
-| Set expiration-warning period | `chage -W 14 username` |
-| Set inactive days after expiration | `chage -I 30 username` |
-| Set password to never expire | `chage -M -1 username` |
-| Set account to never expire | `chage -E -1 username` |
+| `-l` | Display current password and account-expiration details. |
+| `-M days` | Set maximum number of days before a password change is required (`-1` disables). |
+| `-m days` | Set minimum number of days between password changes. |
+| `-W days` | Set number of warning days before password expiration. |
+| `-I days` | Set number of inactive days after expiration before the account is locked. |
+| `-E date` | Set account expiration date (`YYYY-MM-DD`, or `-1` for never). |
 
 ### Smart Card Accounts and Password Expiration
 
@@ -203,7 +235,7 @@ remember = 5
 
 ### `enforce_for_root`
 
-The `enforce_for_root` setting controls whether password-complexity rules apply when `root` uses `passwd`.
+The `enforce_for_root` setting in `/etc/security/pwquality.conf` or `/etc/security/pwhistory.conf` controls whether complexity and history rules apply when `root` uses `passwd`.
 
 - When enabled, `root` must meet configured password-complexity requirements.
 - When commented out or disabled, `root` can set user passwords without meeting those requirements.
@@ -227,13 +259,6 @@ useradd -D -s /sbin/nologin
 
 # Change default home-directory base
 useradd -D -b /home
-```
-
-Other examples:
-
-```bash
-useradd -D -s /bin/zsh
-useradd -D -b /users
 ```
 
 ### Default Configuration Files
@@ -402,10 +427,6 @@ cp /etc/gshadow /etc/gshadow.backup
 ## Practical Tips
 
 - System accounts commonly use UIDs below `1000`; normal user accounts commonly use UIDs of `1000` or higher.
-- Use `usermod -aG` to add groups without removing existing secondary-group memberships.
-- Use `/sbin/nologin` for service, disabled, or non-interactive accounts when appropriate.
-- Use `chage -l username` to review password and account expiration settings.
-- Use `faillock --reset` instead of manually deleting tally files when possible.
 - Test a user's login environment and permissions after changes:
 
 ```bash

@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Boot Procedure and Troubleshooting
+title: Boot Troubleshooting
 parent: Quick Reference
 grand_parent: RHEL
 nav_order: 20
@@ -32,17 +32,12 @@ nav_order: 20
 ## Editing GRUB Boot Arguments
 
 1. Boot the system and press `e` at the GRUB menu.
-2. Find the line beginning with:
-
-   ```text
-   linux ($root)/vmlinuz
-   ```
-
+2. Find the line beginning with `linux ($root)/vmlinuz`.
 3. Add the required boot arguments to the end of that line.
 4. Press `Ctrl-X` to boot with the modified arguments.
 
 {: .note }
-> Boot arguments entered through the GRUB menu are temporary. To make changes persistent, update the appropriate GRUB configuration source, such as `/etc/default/grub`, and regenerate GRUB configuration as required.
+> Boot arguments entered through the GRUB menu are temporary. To make changes persistent, update `/etc/default/grub` and regenerate the GRUB configuration.
 
 ## Troubleshooting Boot Options
 
@@ -59,78 +54,24 @@ nav_order: 20
 {: .warning }
 > Perform password-recovery actions only on systems you are authorized to administer. Changing the root password affects system access and may require coordination with the system owner or security staff.
 
-1. At the GRUB boot menu, press `e` and add `rd.break` to the end of the `linux` line.
-2. Press `Ctrl-X` to boot into the `initramfs` break environment.
-3. Remount the system root file system as read-write:
-
-   ```bash
-   mount -o remount,rw /sysroot
-   ```
-
-4. Change root into the installed system image:
-
-   ```bash
-   chroot /sysroot
-   ```
-
-5. Set a new root password:
-
-   ```bash
-   passwd
-   ```
-
-6. Load the SELinux policy:
-
-   ```bash
-   load_policy -i
-   ```
-
-7. Correct the SELinux context for `/etc/shadow`:
-
-   ```bash
-   chcon -t shadow_t /etc/shadow
-   ```
-
-8. Exit the `chroot` environment:
-
-   ```bash
-   exit
-   ```
-
-9. Exit the `initramfs` environment and continue boot:
-
-   ```bash
-   exit
-   ```
-
-### Alternative SELinux Recovery Method
-
-Instead of manually loading policy and correcting the context, create an autorelabel marker:
+1. At the GRUB boot menu, press `e`, add `rd.break` to the end of the `linux` line, and press `Ctrl-X`.
+2. Remount `/sysroot`, `chroot` into it, reset the password, restore SELinux context, and exit:
 
 ```bash
-touch /.autorelabel
+mount -o remount,rw /sysroot
+chroot /sysroot
+passwd
+load_policy -i
+chcon -t shadow_t /etc/shadow
+exit
+exit
 ```
 
-The system performs a full SELinux relabel during the next boot.
+Alternatively, instead of `load_policy -i` and `chcon`, run `touch /.autorelabel` before exiting to trigger a full SELinux relabel on the next boot.
 
 ## Troubleshooting `/etc/fstab` Issues
 
-### Common Symptoms
-
-```text
-Give root password for maintenance
-```
-
-Or the system boots into emergency mode.
-
-### Common Causes
-
-- A file system check (`fsck`) failed.
-- A device listed in `/etc/fstab` cannot be found.
-- An invalid mount option or file system type is configured.
-- A UUID or device path has changed.
-
-### Recovery Steps
+If `/etc/fstab` has an invalid entry, missing device, or failed `fsck`, the system may drop to `Give root password for maintenance` (emergency mode).
 
 ```bash
 # Review boot errors and the current boot journal
@@ -139,10 +80,8 @@ journalctl -xb
 # Remount the root file system as read-write
 mount -o remount,rw /
 
-# Correct /etc/fstab entries
+# Correct /etc/fstab entries and reboot
 vi /etc/fstab
-
-# Reboot after corrections
 reboot
 ```
 
@@ -160,12 +99,3 @@ reboot
 | Init Start | Compiled into the `initramfs` | Use `init=` or `rd.break` boot arguments. |
 | Root File System | `/etc/fstab` | Repair invalid `/etc/fstab` entries. |
 | Default Target | `systemctl set-default` | Use a `rescue.target` boot argument or correct the default target. |
-
-## Key Points
-
-- Password recovery using `rd.break` is a common administrative recovery procedure.
-- Remove `rhgb` and `quiet` from temporary GRUB boot arguments to view detailed boot messages.
-- Correct SELinux labels after password recovery.
-- `/etc/fstab` errors are a common cause of emergency-mode boots.
-- Boot arguments changed interactively in GRUB are not persistent.
-- `emergency.target` is more minimal than `rescue.target`.

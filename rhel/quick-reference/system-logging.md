@@ -1,6 +1,6 @@
 ---
 layout: default
-title: System Logging Services
+title: System Logging
 parent: Quick Reference
 grand_parent: RHEL
 nav_order: 9
@@ -15,6 +15,18 @@ nav_order: 9
 | `rsyslogd` | Enhanced syslog daemon that writes persistent text log files under `/var/log`. |
 | `systemd-journald` | `systemd` integrated logging service that stores messages in binary journal format. |
 | `auditd` | Auditing service for detailed event tracing; SELinux audit events are recorded through the Linux audit subsystem. |
+
+### When to Use Each Logging Tool
+
+| Tool | Primary Use Case |
+|---|---|
+| `journalctl` | Troubleshooting services, boot issues, and real-time system events. |
+| `/var/log/*` files | Persistent logs, scripts, and text processing with tools such as `grep`, `awk`, and `sed`. |
+| `ausearch` / `aureport` | Security events, SELinux denials, compliance auditing, and STIG-related review. |
+
+1. **`systemd-journald`** collects messages from `systemd` services, kernel messages, and application `stdout`/`stderr`.
+2. **`rsyslog`** receives messages forwarded from `journald` and writes them to persistent text logs under `/var/log`.
+3. **`auditd`** operates through the kernel audit subsystem and records audit events in `/var/log/audit/audit.log`.
 
 ## Common Log Files
 
@@ -31,69 +43,77 @@ nav_order: 9
 
 ## Log File Monitoring
 
-| Task | Command |
-|---|---|
-| Monitor a log file in real time | `tail -f /var/log/messages` |
-| Show the last 20 lines of a log file | `tail -20 /var/log/secure` |
-| View a log file with a pager | `less /var/log/messages` |
-| Search a log file | `grep "pattern" /var/log/messages` |
-
-Examples:
-
 ```bash
+# Monitor a log file in real time
 tail -f /var/log/messages
+
+# Show the last 20 lines of a log file
 tail -20 /var/log/secure
+
+# View a log file with a pager
 less /var/log/messages
+
+# Search a log file
 grep "Failed password" /var/log/secure
 ```
 
 ## `logger`: Write Messages to Syslog
 
-| Task | Command |
-|---|---|
-| Write a message to syslog | `logger "message text"` |
-| Log using a specific facility and priority | `logger -p user.notice "text"` |
-
-Examples:
-
 ```bash
+# Write a message to syslog
 logger "Maintenance task completed"
+
+# Log using a specific facility and priority
 logger -p user.notice "Custom application status message"
 ```
 
 ## `journalctl`: Query the System Journal
 
-| Task | Command |
-|---|---|
-| View the entire journal | `journalctl` |
-| Follow new messages in real time | `journalctl -f` |
-| Show the last 20 lines | `journalctl -n 20` |
-| Show only error-level messages | `journalctl -p err` |
-| Show messages for a specific service | `journalctl -u sshd.service` |
-| Show messages since yesterday | `journalctl --since yesterday` |
-| Show messages since today | `journalctl --since today` |
-| Show messages since a specific time | `journalctl --since "2019-06-08 09:00:00"` |
-| Show messages within a time range | `journalctl --since 9:00:00 --until 15:00:00` |
-| Show kernel messages | `journalctl -k` |
-| Show messages since the current boot | `journalctl -b` |
-| Show messages from the previous boot | `journalctl -b -1` |
+### Common `journalctl` Options
 
-Examples:
+| Option | Purpose |
+|---|---|
+| `-f` | Follow new messages in real time |
+| `-n <num>` | Show the last `<num>` lines |
+| `-p <priority>` | Filter by priority (e.g., `err`, `warning`, `crit`) |
+| `-u <unit>` | Show messages for a specific `systemd` unit |
+| `--since` / `--until` | Filter by relative or absolute time |
+| `-k` | Show kernel messages |
+| `-b` / `-b -1` | Show messages from current boot or previous boot |
 
 ```bash
-# Follow SSH daemon messages
+# View the entire journal
+journalctl
+
+# Follow new messages in real time (all or for a specific service)
+journalctl -f
 journalctl -u sshd.service -f
+
+# Show the last 20 lines
+journalctl -n 20
+
+# Show only error-level messages
+journalctl -p err
 
 # Show errors since the current boot
 journalctl -b -p err
 
-# Show messages during a specific period
+# Show kernel messages
+journalctl -k
+
+# Show messages from the previous boot
+journalctl -b -1
+
+# Filter by time
+journalctl --since yesterday
+journalctl --since today
+journalctl --since "2019-06-08 09:00:00"
 journalctl --since "09:00:00" --until "15:00:00"
 ```
 
 ## Making `journald` Persistent
 
-By default, journal storage may be volatile and cleared during reboot. Configure persistent journal storage under `/var/log/journal`.
+By default, journal storage may be volatile and cleared during reboot. Configure persistent journal storage under `/var/log/journal`:
 
 ```bash
 # Create persistent journal directory
@@ -111,50 +131,33 @@ killall -USR1 systemd-journald
 
 ## Audit Log Commands
 
-| Task | Command |
-|---|---|
-| Search for SELinux denials | `ausearch -m AVC` |
-| Search for login attempts | `ausearch -m USER_LOGIN` |
-| Search access to a specific file | `ausearch -f /etc/passwd` |
-| Search activity by UID | `ausearch -ui 1000` |
-| Show today's audit events | `ausearch -ts today` |
-| Show recent audit events | `ausearch -ts recent` |
-| Show recent events with interpreted fields | `ausearch -ts recent -i` |
-| Generate an audit summary report | `aureport` |
-| Generate an authentication report | `aureport --auth` |
-| Show recent authentication events | `ausearch -ts recent -m USER_LOGIN -i` |
-| Show failed authentication events | `aureport --auth --failed` |
-| Generate a report of failed events | `aureport --failed` |
-| Show executable summary | `aureport -x --summary` |
-
-Examples:
-
 ```bash
-# Search recent SELinux access vector cache denials
+# Search for SELinux denials (most recent, interpreted)
+ausearch -m AVC
 ausearch -m AVC -ts recent -i
 
-# Search authentication events from today
+# Search for login attempts
+ausearch -m USER_LOGIN
 ausearch -m USER_LOGIN -ts today -i
+ausearch -ts recent -m USER_LOGIN -i
 
-# Find audit events associated with a file
+# Search access to a specific file
 ausearch -f /etc/passwd -i
+
+# Search activity by UID
+ausearch -ui 1000
+
+# Show today's or recent audit events
+ausearch -ts today
+ausearch -ts recent -i
+
+# Generate summary, authentication, failed, or executable reports
+aureport
+aureport --auth
+aureport --auth --failed
+aureport --failed
+aureport -x --summary
 ```
-
-## How Logging Systems Work Together
-
-### Logging Flow
-
-1. **`systemd-journald`** acts as a central collector for messages from `systemd` services, kernel messages, and application standard output and standard error.
-2. **`rsyslog`** can receive messages forwarded from `journald` and write them to persistent text logs under `/var/log`, including files such as `messages`, `secure`, and `cron`.
-3. **`auditd`** operates independently through the kernel audit subsystem and records audit events directly in `/var/log/audit/audit.log`. Audit events can also be forwarded to the journal depending on system configuration.
-
-## When to Use Each Logging Tool
-
-| Tool | Primary Use Case |
-|---|---|
-| `journalctl` | Troubleshooting services, boot issues, and real-time system events. |
-| `/var/log/*` files | Persistent logs, scripts, and text processing with tools such as `grep`, `awk`, and `sed`. |
-| `ausearch` / `aureport` | Security events, SELinux denials, compliance auditing, and STIG-related review. |
 
 ## `rsyslogd` Configuration
 
@@ -163,7 +166,7 @@ ausearch -f /etc/passwd -i
 | `/etc/rsyslog.conf` | Main `rsyslogd` configuration file. |
 | `/etc/rsyslog.d/` | Directory for custom `rsyslogd` configuration files. |
 
-## `rsyslogd` Facilities
+### `rsyslogd` Facilities
 
 | Facility | Common Use |
 |---|---|
@@ -175,7 +178,7 @@ ausearch -f /etc/passwd -i
 | `user` | User-space application messages. |
 | `local0` through `local7` | Custom application or organizational facility assignments. |
 
-## `rsyslogd` Priorities
+### `rsyslogd` Priorities
 
 | Priority | Description |
 |---|---|
@@ -188,7 +191,7 @@ ausearch -f /etc/passwd -i
 | `alert` | Service availability may be ending. |
 | `emerg` | Service availability has ended or the system is unusable. |
 
-## `rsyslog.conf` Rule Examples
+### `rsyslog.conf` Rule Examples
 
 ```rsyslog
 # Write all authentication and authorization messages to /var/log/secure

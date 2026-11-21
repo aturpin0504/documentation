@@ -1,6 +1,6 @@
 ---
 layout: default
-title: firewalld Management
+title: firewalld
 parent: Quick Reference
 grand_parent: RHEL
 nav_order: 14
@@ -10,41 +10,27 @@ nav_order: 14
 
 ## firewalld vs. systemd Services
 
-A **systemd service** is a running daemon or process, such as `httpd`, `sshd`, or `mariadb`.
-
-A **firewalld service** is a firewall rule template that defines the ports, protocols, modules, and related settings needed to allow network traffic for a common application. It is separate from the systemd service that runs the actual daemon. firewalld services apply within zones and can include one or more ports or addresses. 
+A **systemd service** is a running daemon or process (such as `httpd`, `sshd`, or `mariadb`). A **firewalld service** is an XML-based firewall rule template (predefined under `/usr/lib/firewalld/services/`) that defines the ports, protocols, and modules to allow for an application within a zone.
 
 ### Example Workflow: Apache HTTP Server
 
 ```bash
-# Install the Apache HTTP Server package
+# Install and start the Apache HTTP daemon
 dnf install httpd
-
-# Start the daemon; the process listens on its configured port
 systemctl start httpd
 
-# Open the HTTP firewall service permanently
+# Open the HTTP firewalld service permanently and apply to runtime
 firewall-cmd --add-service=http --permanent
-
-# Apply the permanent configuration to the runtime configuration
 firewall-cmd --reload
 ```
 
-firewalld service definitions are XML-based templates. Predefined service files commonly reside under `/usr/lib/firewalld/services/`; locally created service definitions should be managed separately from package-provided files. 
-
 ## Zones
 
-A **zone** is a collection of firewall rules applied to incoming traffic associated with a source IP address or network interface. firewalld uses zones to assign different levels of trust to networks, interfaces, and sources. 
+A **zone** is a collection of firewall rules applied to incoming traffic based on:
 
-### Zone Assignment Priority
-
-Traffic is evaluated according to its matching zone assignment:
-
-1. **Source IP or network**
+1. **Source IP or network** (highest priority)
 2. **Network interface**
-3. **Default zone**
-
-The default zone is commonly `public` unless changed.
+3. **Default zone** (commonly `public`)
 
 ### Common Zones
 
@@ -64,119 +50,114 @@ The default zone is commonly `public` unless changed.
 
 | Configuration Type | Behavior |
 |---|---|
-| **Runtime** | Active immediately but lost after a firewalld reload or service restart. |
-| **Permanent** | Saved configuration. Use `--permanent`, then reload firewalld to apply it to the active runtime configuration. |
-
-At firewalld startup, the permanent configuration becomes the runtime configuration. A reload also replaces runtime-only settings with the permanent configuration. 
+| **Runtime** | Active immediately, but lost after `firewall-cmd --reload` or `systemctl restart firewalld`. |
+| **Permanent** | Saved configuration (`--permanent`). Run `firewall-cmd --reload` to apply it to the active runtime configuration. |
 
 {: .important }
 > Use `--permanent` for changes that must survive reboot or firewalld restart, then run `firewall-cmd --reload`.
 
 ## Zone Management
 
-| Task | Command |
-|---|---|
-| List all zones | `firewall-cmd --get-zones` |
-| Show default zone | `firewall-cmd --get-default-zone` |
-| Set default zone | `firewall-cmd --set-default-zone=ZONE` |
-| Show active zone configuration | `firewall-cmd --list-all` |
-| Show a specific zone configuration | `firewall-cmd --list-all --zone=ZONE` |
-| Show all zone configurations | `firewall-cmd --list-all-zones` |
-| Show active zones with interfaces and sources | `firewall-cmd --get-active-zones` |
+```bash
+# List all zones and check the default zone
+firewall-cmd --get-zones
+firewall-cmd --get-default-zone
 
-{: .note }
-> Setting the default zone with `firewall-cmd --set-default-zone` updates the default-zone setting without requiring `--permanent`. 
+# Set the default zone (persists without --permanent)
+firewall-cmd --set-default-zone=ZONE
+
+# Inspect active, specific, or all zone configurations
+firewall-cmd --list-all
+firewall-cmd --list-all --zone=ZONE
+firewall-cmd --list-all-zones
+
+# Show active zones with their interfaces and sources
+firewall-cmd --get-active-zones
+```
 
 ## Service Management
 
-| Task | Command |
-|---|---|
-| List available firewalld services | `firewall-cmd --get-services` |
-| List services enabled in the current zone | `firewall-cmd --list-services` |
-| Show ports opened by a service | `firewall-cmd --info-service=http` |
-| Add a service at runtime only | `firewall-cmd --add-service=SERVICE` |
-| Add a service permanently | `firewall-cmd --add-service=SERVICE --permanent` |
-| Add a service permanently to a specific zone | `firewall-cmd --add-service=SERVICE --zone=ZONE --permanent` |
-| Remove a runtime service | `firewall-cmd --remove-service=SERVICE` |
-| Remove a service permanently | `firewall-cmd --remove-service=SERVICE --permanent` |
+Prefer predefined firewalld **services** over individual port rules when a suitable service definition exists.
+
+```bash
+# List available services, enabled services, or ports opened by a service
+firewall-cmd --get-services
+firewall-cmd --list-services
+firewall-cmd --info-service=http
+
+# Add a service (runtime only vs. permanent)
+firewall-cmd --add-service=SERVICE
+firewall-cmd --add-service=SERVICE --permanent
+firewall-cmd --add-service=SERVICE --zone=ZONE --permanent
+
+# Remove a service (runtime only vs. permanent)
+firewall-cmd --remove-service=SERVICE
+firewall-cmd --remove-service=SERVICE --permanent
+```
 
 ## Port Management
 
-| Task | Command |
-|---|---|
-| Add a port at runtime only | `firewall-cmd --add-port=8080/tcp` |
-| Add a port permanently | `firewall-cmd --add-port=8080/tcp --permanent` |
-| Remove a runtime port | `firewall-cmd --remove-port=8080/tcp` |
-| Remove a port permanently | `firewall-cmd --remove-port=8080/tcp --permanent` |
+```bash
+# Add a port (runtime only vs. permanent)
+firewall-cmd --add-port=8080/tcp
+firewall-cmd --add-port=8080/tcp --permanent
 
-## Interface Management
+# Remove a port (runtime only vs. permanent)
+firewall-cmd --remove-port=8080/tcp
+firewall-cmd --remove-port=8080/tcp --permanent
+```
 
-| Task | Command |
-|---|---|
-| Add an interface to a zone at runtime | `firewall-cmd --add-interface=eno1 --zone=dmz` |
-| Add an interface to a zone permanently | `firewall-cmd --add-interface=eno1 --zone=dmz --permanent` |
-| Remove an interface at runtime | `firewall-cmd --remove-interface=eno1` |
-| Remove an interface permanently | `firewall-cmd --remove-interface=eno1 --permanent` |
+## Interface and Source IP Management
 
-## Source IP Management
+```bash
+# Assign an interface to a zone (runtime vs. permanent)
+firewall-cmd --add-interface=eno1 --zone=dmz
+firewall-cmd --add-interface=eno1 --zone=dmz --permanent
 
-| Task | Command |
-|---|---|
-| Add a source network at runtime | `firewall-cmd --add-source=192.168.1.0/24 --zone=trusted` |
-| Add a source network permanently | `firewall-cmd --add-source=192.168.1.0/24 --zone=trusted --permanent` |
-| Remove a source network at runtime | `firewall-cmd --remove-source=192.168.1.0/24` |
-| Remove a source network permanently | `firewall-cmd --remove-source=192.168.1.0/24 --permanent` |
+# Remove an interface from its zone
+firewall-cmd --remove-interface=eno1
+firewall-cmd --remove-interface=eno1 --permanent
+
+# Assign a source network to a zone (runtime vs. permanent)
+firewall-cmd --add-source=192.168.1.0/24 --zone=trusted
+firewall-cmd --add-source=192.168.1.0/24 --zone=trusted --permanent
+
+# Remove a source network
+firewall-cmd --remove-source=192.168.1.0/24
+firewall-cmd --remove-source=192.168.1.0/24 --permanent
+```
 
 ## Applying Changes
 
-| Task | Command |
-|---|---|
-| Reload permanent configuration into the runtime configuration | `firewall-cmd --reload` |
-| Restart firewalld completely | `systemctl restart firewalld` |
+```bash
+# Reload permanent configuration into runtime
+firewall-cmd --reload
+
+# Restart firewalld completely
+systemctl restart firewalld
+```
 
 {: .warning }
-> `firewall-cmd --reload` and `systemctl restart firewalld` discard runtime-only changes that were not also saved with `--permanent`. 
+> `firewall-cmd --reload` and `systemctl restart firewalld` discard runtime-only changes that were not saved with `--permanent`.
 
 ## Common Workflows
 
-### Add the HTTP Service Permanently
-
 ```bash
+# 1. Verify firewalld is active
+systemctl status firewalld
+
+# 2. Add HTTP permanently, reload, and verify
 firewall-cmd --add-service=http --permanent
 firewall-cmd --reload
 firewall-cmd --list-all
-```
 
-### Add a Custom TCP Port Permanently
-
-```bash
+# 3. Add a custom TCP port permanently and reload
 firewall-cmd --add-port=2022/tcp --permanent
 firewall-cmd --reload
 firewall-cmd --list-all
-```
 
-### Allow a Specific Source Network
-
-```bash
+# 4. Allow a specific source network in the trusted zone
 firewall-cmd --permanent --add-source=192.168.0.0/24 --zone=trusted
 firewall-cmd --reload
+firewall-cmd --get-active-zones
 ```
-
-## Best Practices
-
-- Use `--permanent` and `firewall-cmd --reload` for persistent changes.
-- Prefer predefined firewalld **services** over individual port rules when a suitable service definition exists.
-- Verify firewalld is active before making changes:
-
-  ```bash
-  systemctl status firewalld
-  ```
-
-- Confirm the active zone, interfaces, sources, services, and ports after changes:
-
-  ```bash
-  firewall-cmd --get-active-zones
-  firewall-cmd --list-all
-  ```
-
-- firewalld blocks traffic on ports that are not explicitly opened by a zone rule; zones such as `trusted` can allow all traffic by default. 

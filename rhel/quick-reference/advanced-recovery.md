@@ -19,22 +19,28 @@ nav_order: 21
 | **Boot from Local Drive** | Least intrusive option; attempts to use the local boot loader. |
 | **Run Memory Test** | Tests memory and identifies bad memory. |
 
-## Rescue System Commands
+### Rescue System Commands
 
-| Task | Command |
-|---|---|
-| Make the installed system image the root environment | `chroot /mnt/sysimage` |
-| Exit the `chroot` environment | `exit` |
-| Reboot the system | `reboot` |
+```bash
+# Make the installed system image the root environment
+chroot /mnt/sysimage
+
+# Exit the chroot environment and reboot
+exit
+reboot
+```
 
 ## Reinstalling GRUB 2
 
 ### From a Bootable System
 
-| Environment | Command |
-|---|---|
-| Physical server, VMware, or VirtualBox | `grub2-install /dev/sda` |
-| KVM virtual machine | `grub2-install /dev/vda` |
+```bash
+# Physical server, VMware, or VirtualBox
+grub2-install /dev/sda
+
+# KVM virtual machine
+grub2-install /dev/vda
+```
 
 ### From Rescue Mode
 
@@ -52,20 +58,28 @@ reboot
 
 ## Making GRUB Changes Persistent
 
-| Task | Command |
-|---|---|
-| Edit GRUB configuration defaults | `vi /etc/default/grub` |
-| Generate GRUB configuration for BIOS systems | `grub2-mkconfig -o /boot/grub2/grub.cfg` |
-| Generate GRUB configuration for UEFI systems | `grub2-mkconfig -o /boot/efi/EFI/redhat/grub.cfg` |
+```bash
+# Edit GRUB configuration defaults
+vi /etc/default/grub
+
+# Generate GRUB configuration for BIOS systems
+grub2-mkconfig -o /boot/grub2/grub.cfg
+
+# Generate GRUB configuration for UEFI systems
+grub2-mkconfig -o /boot/efi/EFI/redhat/grub.cfg
+```
 
 ## Re-Creating `initramfs`
 
-| Task | Command |
-|---|---|
-| Recreate `initramfs`, overwriting the existing image | `dracut --force` |
-| Create a new `initramfs` without overwriting an existing image | `dracut` |
+```bash
+# Recreate initramfs, overwriting the existing image
+dracut --force
 
-## Dracut Configuration Files
+# Create a new initramfs without overwriting an existing image
+dracut
+```
+
+### Dracut Configuration Files
 
 | File or Directory | Purpose |
 |---|---|

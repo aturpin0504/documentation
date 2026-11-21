@@ -1,6 +1,6 @@
 ---
 layout: default
-title: SELinux Fundamentals
+title: SELinux
 parent: Quick Reference
 grand_parent: RHEL
 nav_order: 17
@@ -10,35 +10,17 @@ nav_order: 17
 
 ## What Is SELinux?
 
-SELinux provides **mandatory access control (MAC)** for Linux systems. Access is denied by default unless explicitly allowed by SELinux policy.
+SELinux provides **mandatory access control (MAC)** for Linux systems. Access is denied by default unless explicitly allowed by SELinux policy—even when traditional Linux file permissions are permissive.
 
-This deny-by-default model can prevent unauthorized access even when traditional Linux file permissions are incorrectly configured.
-
-### Key Concept
-
-SELinux applies labels, called **contexts**, to target objects such as:
-
-- Files
-- Directories
-- Ports
-
-Processes run in **domains** and must be permitted by policy to access objects with the required context type.
-
-Example:
-
-```text
-The httpd process requires content files labeled httpd_sys_content_t.
-```
+SELinux applies labels (**contexts**) to files, directories, and ports. Processes run in **domains** and must be permitted by policy to access objects with the required context type (for example, `httpd` requires content files labeled `httpd_sys_content_t`).
 
 ## Installing `semanage`
 
-The `semanage` command may not be installed by default.
+The `semanage` command may not be installed by default:
 
 ```bash
-# Identify the package that provides semanage
+# Identify and install the package that provides semanage
 yum whatprovides */semanage
-
-# Install the package
 yum install policycoreutils-python-utils
 ```
 
@@ -50,27 +32,20 @@ yum install policycoreutils-python-utils
 | **Permissive** | SELinux logs policy violations but does not block access; useful for troubleshooting. |
 | **Disabled** | SELinux is not active. Changing to or from disabled mode requires a reboot. |
 
-## SELinux Mode Management
+```bash
+# Display current mode and detailed SELinux status
+getenforce
+sestatus
 
-| Task | Command or Configuration |
-|---|---|
-| Display current mode | `getenforce` |
-| Switch to permissive mode temporarily | `setenforce 0` |
-| Switch to enforcing mode temporarily | `setenforce 1` |
-| Show detailed SELinux status | `sestatus` |
-| Set persistent SELinux mode | Edit `/etc/sysconfig/selinux` |
-
-Example persistent configuration:
-
-```ini
-SELINUX=enforcing
+# Switch to permissive (0) or enforcing (1) mode temporarily
+setenforce 0
+setenforce 1
 ```
 
-Other valid values:
+To set the persistent mode, edit `/etc/sysconfig/selinux`:
 
 ```ini
-SELINUX=permissive
-SELINUX=disabled
+SELINUX=enforcing   # Or permissive / disabled
 ```
 
 {: .note }
@@ -78,19 +53,7 @@ SELINUX=disabled
 
 ## SELinux Context Labels
 
-SELinux contexts use the following format:
-
-```text
-user:role:type
-```
-
-Example:
-
-```text
-system_u:object_r:httpd_sys_content_t:s0
-```
-
-For daily administration, focus on the **type** field, which typically ends in `_t`.
+SELinux contexts use the format `user:role:type[:level]` (for example, `system_u:object_r:httpd_sys_content_t:s0`). For daily administration, focus on the **type** field, which typically ends in `_t`.
 
 | Context Field | Purpose |
 |---|---|
@@ -99,37 +62,25 @@ For daily administration, focus on the **type** field, which typically ends in `
 | `type` | Type enforcement label; typically ends in `_t`. Most relevant for routine administration. |
 | `level` | MLS/MCS security level, when applicable. |
 
-## Viewing SELinux Contexts
-
-| Task | Command |
-|---|---|
-| View file or directory contexts | `ls -Z /var/www` |
-| View file-context policy rules | <code>semanage fcontext -l &#124; grep httpd</code> |
-| View process contexts | `ps Zaux` |
-| View port contexts | `ss -Ztul` |
-| View port-context policy rules | <code>semanage port -l &#124; grep ssh</code> |
-
-### Usage Notes
-
-Replace `httpd` or `ssh` in the `grep` command with the relevant service or context.
-
-Examples:
+### Viewing SELinux Contexts
 
 ```bash
-semanage fcontext -l | grep ftp
+# View file/directory, process, and port contexts
+ls -Z /var/www
+ps Zaux
+ss -Ztul
+
+# Search file-context and port-context policy rules
+semanage fcontext -l | grep httpd
 semanage fcontext -l | grep httpd_sys_content_t
+semanage port -l | grep ssh
 semanage port -l | grep ssh_port_t
 ```
-
-- Search by service name, such as `httpd`, `ssh`, or `ftp`, to see related contexts.
-- Search by specific context type to find an exact match.
 
 ## Setting File and Directory Contexts
 
 {: .important }
 > Use `semanage` to modify SELinux policy and `restorecon` to apply the policy to files. Avoid using `chcon` for permanent changes because its changes are lost during a relabel.
-
-### Add and Apply a File Context Rule
 
 ```bash
 # Add a recursive file-context rule to SELinux policy
@@ -142,27 +93,19 @@ restorecon -Rv /web
 semanage fcontext -l | grep /web
 ```
 
-## `semanage` Parameters
+### `semanage` and `restorecon` Parameters
 
-| Parameter | Description |
+| Command / Parameter | Description |
 |---|---|
-| `fcontext` | Manage file and directory context rules. |
-| `port` | Manage network-port labels. |
-| `-a` | Add a new rule. |
-| `-d` | Delete a rule. |
-| `-m` | Modify an existing rule. |
+| `semanage fcontext` | Manage file and directory context rules. |
+| `semanage port` | Manage network-port labels. |
+| `-a` / `-d` / `-m` | Add, delete, or modify a rule. |
 | `-t TYPE` | Specify the SELinux type context. |
-| `-p PROTOCOL` | Specify the network protocol, such as `tcp` or `udp`. |
+| `-p PROTOCOL` | Specify the network protocol (`tcp` or `udp`). |
 | `-l` | List current rules. |
+| `restorecon -R -v` | Apply policy contexts recursively (`-R`) with verbose output (`-v`). |
 
-## `restorecon` Parameters
-
-| Parameter | Description |
-|---|---|
-| `-R` | Apply changes recursively to directories and files. |
-| `-v` | Display verbose output showing changes. |
-
-## Common SELinux Context Types
+### Common SELinux Context Types
 
 | Context Type | Use |
 |---|---|
@@ -170,7 +113,7 @@ semanage fcontext -l | grep /web
 | `httpd_sys_script_exec_t` | Apache CGI scripts. |
 | `ssh_port_t` | SSH service ports. |
 
-## Context Inheritance Rules
+### Context Inheritance Rules
 
 | Action | Result |
 |---|---|
@@ -180,72 +123,53 @@ semanage fcontext -l | grep /web
 
 ## Port Label Management
 
-| Task | Command |
-|---|---|
-| List port labels related to SSH | <code>semanage port -l &#124; grep ssh</code> |
-| Add SELinux label for SSH on TCP port 2022 | `semanage port -a -t ssh_port_t -p tcp 2022` |
-| Delete SELinux label for SSH on TCP port 2022 | `semanage port -d -t ssh_port_t -p tcp 2022` |
+```bash
+# List port labels related to SSH
+semanage port -l | grep ssh
+
+# Add or delete an SELinux label for SSH on TCP port 2022
+semanage port -a -t ssh_port_t -p tcp 2022
+semanage port -d -t ssh_port_t -p tcp 2022
+```
 
 ## SELinux Booleans
 
-SELinux booleans provide a method to enable or disable specific policy behavior without rewriting policy rules.
+SELinux booleans enable or disable specific policy behavior without rewriting policy rules.
 
-| Task | Command |
-|---|---|
-| List all booleans | `getsebool -a` |
-| Search booleans | <code>getsebool -a &#124; grep ftp</code> |
-| Set a boolean persistently | `setsebool -P ftpd_anon_write on` |
+```bash
+# List all booleans or search by service
+getsebool -a
+getsebool -a | grep ftp
+
+# Set a boolean persistently
+setsebool -P ftpd_anon_write on
+```
 
 {: .note }
 > SELinux booleans can change service behavior independently of the service's application configuration. Verify the intended effect before enabling a boolean persistently.
 
-## SELinux Troubleshooting Workflow
+## SELinux Troubleshooting
 
 | Step | Action |
 |---:|---|
 | 1 | Verify whether SELinux is causing the issue by temporarily switching to permissive mode with `setenforce 0` and testing. |
-| 2 | Check the audit log for access denials. |
+| 2 | Check `/var/log/audit/audit.log` for `AVC` access denials. |
 | 3 | Identify the source context (`scontext`) and target context (`tcontext`). |
 | 4 | Apply the appropriate fix using `semanage` and `restorecon`, or set an applicable boolean. |
 | 5 | Re-enable enforcing mode with `setenforce 1`. |
 | 6 | Test the service to confirm the issue is resolved. |
 
-Example:
-
 ```bash
-# Temporarily test whether SELinux is the cause
+# Temporarily test whether SELinux is the cause, then return to enforcing mode
 setenforce 0
-
-# Test the affected service or application
-
-# Return SELinux to enforcing mode
+# ... test the affected service ...
 setenforce 1
-```
 
-## SELinux Troubleshooting Tools
-
-| Task | Command or Location |
-|---|---|
-| Primary SELinux audit log | `/var/log/audit/audit.log` |
-| Search for SELinux denials | `grep AVC /var/log/audit/audit.log` |
-| Install `sealert` tools | `yum install setroubleshoot-server` |
-| View readable messages after `sealert` installation | `/var/log/messages` |
-
-Examples:
-
-```bash
-# Show recent SELinux AVC denials
+# Search /var/log/audit/audit.log for SELinux denials or specific context types
+grep AVC /var/log/audit/audit.log
 grep AVC /var/log/audit/audit.log | tail
-
-# Search the audit log for a specific context type
 grep httpd_sys_content_t /var/log/audit/audit.log
+
+# Install sealert tools (outputs readable analysis to /var/log/messages)
+yum install setroubleshoot-server
 ```
-
-## Daily Administration Essentials
-
-- Keep SELinux in **enforcing** mode.
-- Use `semanage fcontext` and `restorecon` for persistent file and directory context changes.
-- Use `semanage port` when configuring services on non-standard ports.
-- Use `setsebool -P` for persistent SELinux policy behavior changes.
-- Check `/var/log/audit/audit.log` for SELinux denials.
-- Do not rely on `chcon` for permanent context changes because relabeling removes those changes.

@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Cron and At Service Management
+title: Cron & At
 parent: Quick Reference
 grand_parent: RHEL
 nav_order: 10
@@ -12,12 +12,13 @@ nav_order: 10
 
 `cron` is a service for running processes automatically at scheduled times. It consists of the `crond` daemon and cron configuration files.
 
-## Managing the `crond` Service
+```bash
+# Check the current status of the cron service
+systemctl status crond
 
-| Task | Command |
-|---|---|
-| Check the current status of the cron service | `systemctl status crond` |
-| Show current service state with full output | `systemctl status crond -l` |
+# Show current service state with full output
+systemctl status crond -l
+```
 
 {: .note }
 > `crond` wakes up every minute to check its configuration. Configuration changes do not normally require a service reload or restart.
@@ -36,14 +37,19 @@ nav_order: 10
 
 ## Managing User Cron Jobs
 
-| Task | Command |
-|---|---|
-| Edit the current user's cron jobs | `crontab -e` |
-| Edit a specific user's cron jobs; run as root | `crontab -e -u username` |
-| List the current user's cron jobs | `crontab -l` |
-| List a specific user's cron jobs | `crontab -l -u username` |
-| Remove the current user's crontab | `crontab -r` |
-| Remove a specific user's crontab; run as root | `crontab -r -u username` |
+```bash
+# Edit or list the current user's cron jobs
+crontab -e
+crontab -l
+
+# Edit or list a specific user's cron jobs (run as root)
+crontab -e -u username
+crontab -l -u username
+
+# Remove the current user's or a specific user's crontab
+crontab -r
+crontab -r -u username
+```
 
 {: .warning }
 > `crontab -r` deletes the crontab without opening an editor. Verify the intended user before running it.
@@ -64,13 +70,11 @@ minute hour day-of-month month day-of-week command
 | Month | `1-12` |
 | Day of week | `0-7`; Sunday is `0` or `7` |
 
-Example user crontab entry:
+Example user crontab entry (runs at 2:00 AM, Monday through Friday):
 
 ```cron
 0 2 * * 1-5 logger message from root
 ```
-
-This runs at 2:00 AM, Monday through Friday.
 
 ### `/etc/cron.d/` Format
 
@@ -80,13 +84,11 @@ Files in `/etc/cron.d/` include an additional **username** field:
 minute hour day-of-month month day-of-week username command
 ```
 
-Example:
+Example (runs at minute 11 of every hour as `root`):
 
 ```cron
 11 * * * * root logger message from /etc/cron.d
 ```
-
-This runs at minute 11 of every hour as `root`.
 
 ## Environment Variables in Crontab
 
@@ -116,87 +118,52 @@ MAILTO=admin@example.com
 {: .note }
 > `/etc/cron.allow` and `/etc/cron.deny` should not both exist simultaneously. If neither file exists, only `root` can use `cron`.
 
-## Cron Operational Tips
+## Cron Operational Checks
 
 - Allow a three-minute margin between saving a cron configuration and the intended execution time.
-- Verify that the `crond` service is running.
 - Scripts in `/etc/cron.hourly/`, `/etc/cron.daily/`, `/etc/cron.weekly/`, and `/etc/cron.monthly/` require execute permissions.
+- No single command displays every scheduled cron job; check user crontabs (`crontab -l`), `/etc/crontab`, `/etc/cron.d/`, and `/etc/cron.{hourly,daily,weekly,monthly}/`.
 
 ```bash
+# Ensure drop-in cron scripts are executable
 chmod +x /etc/cron.daily/example-script
-```
 
-- Review `/var/log/messages` for cron activity:
-
-```bash
+# Review /var/log/messages for cron activity
 grep cron /var/log/messages
 grep CROND /var/log/messages
 ```
 
-- No single command displays every scheduled cron job. Review all applicable locations:
-  - User crontabs with `crontab -l`.
-  - Other users' crontabs with `crontab -l -u username`.
-  - `/etc/crontab`.
-  - `/etc/cron.d/`.
-  - `/etc/cron.hourly/`, `/etc/cron.daily/`, `/etc/cron.weekly/`, and `/etc/cron.monthly/`.
-
 ## At Service: One-Time Task Scheduling
 
-The `at` service schedules commands to run once at a specified time.
+The `at` service schedules commands to run once at a specified time. Ensure the `atd` service is running and scripts are executable before scheduling.
 
-## Managing the `atd` Service
+```bash
+# Check the atd service status
+systemctl status atd
 
-| Task | Command |
-|---|---|
-| Check the `atd` service status | `systemctl status atd` |
+# Schedule one-time jobs
+at 15:00
+at teatime
+at noon
+at tomorrow
 
-## `at` Commands
+# View or remove scheduled at jobs
+atq
+atrm jobnumber
 
-| Task | Command |
-|---|---|
-| Schedule a job for 3:00 PM | `at 15:00` |
-| Schedule a job for 4:00 PM | `at teatime` |
-| Schedule a job for noon | `at noon` |
-| Schedule a job for tomorrow | `at tomorrow` |
-| View scheduled `at` jobs | `atq` |
-| Remove a scheduled job | `atrm jobnumber` |
-| Execute a job when system load permits; typically below `0.8` | `batch` |
+# Execute a job when system load permits (typically below 0.8)
+batch
+```
 
-## Using `at`
+### Interactive `at` Session
 
-1. Start an `at` session with the desired execution time:
-
-   ```bash
-   at 15:00
-   ```
-
-2. Enter the command or commands to run:
-
-   ```bash
-   /path/to/script.sh
-   ```
-
+1. Start an `at` session with `at 15:00`.
+2. Enter the command or script path (e.g., `/path/to/script.sh`).
 3. Press `Ctrl-D` to close the `at` prompt and save the job.
-
-4. Verify the scheduled job:
-
-   ```bash
-   atq
-   ```
-
-Example:
+4. Verify with `atq`.
 
 ```text
 $ at 15:00
 at> logger "One-time maintenance task started"
 at> <Ctrl-D>
-```
-
-## At Service Tips
-
-- The `atd` service must be running to schedule and execute `at` jobs.
-- Ensure scripts are executable before scheduling them:
-
-```bash
-chmod +x scriptname
 ```
