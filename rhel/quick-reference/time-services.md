@@ -50,15 +50,16 @@ chronyc sources
 
 ## Configuring an NTP Client
 
-Edit `/etc/chrony.conf` and add a custom NTP server:
+Edit `/etc/chrony.conf` and configure your NTP server(s) (STIG baselines typically require `maxpoll 16` or lower on `server`/`pool` lines):
 
 ```ini
 # pool 2.rhel.pool.ntp.org iburst
 
-server server1.example.com iburst
+server 0.us.pool.ntp.mil iburst maxpoll 16
 ```
 
-The `iburst` option accelerates initial synchronization by using short polling intervals for the first several requests.
+- `iburst` accelerates initial synchronization using short polling intervals for the first several requests.
+- `maxpoll 16` caps the maximum polling interval at 65,536 seconds (~18.2 hours) to meet STIG requirements.
 
 Apply the configuration and verify synchronization:
 
@@ -74,8 +75,8 @@ Edit `/etc/chrony.conf` to configure upstream time sources and permit NTP client
 ```ini
 # pool 2.rhel.pool.ntp.org iburst
 
-server dc1.example.com iburst
-server dc2.example.com iburst
+server dc1.example.com iburst maxpoll 16
+server dc2.example.com iburst maxpoll 16
 
 allow 192.168.0.0/16
 ```
