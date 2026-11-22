@@ -1,12 +1,39 @@
 ---
 layout: default
-title: SSH Hardening
+title: SSH & SFTP
 parent: Quick Reference
 grand_parent: RHEL
 nav_order: 13
 ---
 
-# SSH Basic Hardening
+# SSH Management and Hardening
+
+## SSH Service and Key Files
+
+```bash
+# Manage the SSH daemon
+systemctl status sshd
+systemctl start sshd
+systemctl enable sshd
+systemctl reload sshd
+systemctl restart sshd
+```
+
+| File | Purpose |
+|---|---|
+| `/etc/ssh/sshd_config` | Main SSH server configuration file (`sshd_config.d/` for drop-ins where supported). |
+| `/etc/ssh/ssh_config` | System-wide SSH client configuration. |
+| `~/.ssh/config` | Per-user SSH client configuration. |
+| `~/.ssh/known_hosts` | Server fingerprints for previously connected hosts. |
+| `~/.ssh/authorized_keys` | Public keys authorized to authenticate to the account. |
+
+## Login Messages
+
+| File | Display Time | Description |
+|---|---|---|
+| `/etc/motd` | After login | Message of the Day; displayed for shell logins. |
+| `/etc/issue` | Before login | Console login message. |
+| `/etc/issue.net` | Before login | SSH or network login message. |
 
 ## SSH Server Configuration
 
@@ -122,6 +149,40 @@ semanage port -l | grep ssh
 # Verify SSH is listening on port 22 or 2022
 ss -tlnp | grep :22
 ss -tlnp | grep :2022
+
+# Check firewall rules and IPv4 addresses
+firewall-cmd --list-all
+ip a | grep 'inet '
 ```
 
 For STIG-hardened systems, use `journalctl -u sshd` and audit logs when authentication events are not written to `/var/log/secure`.
+
+## Blocking SSH Key Access
+
+```bash
+# Remove a specific public key entry
+sed -i '/user@host/d' ~/.ssh/authorized_keys
+
+# Fully lock an account (usermod -L alone does not block SSH keys)
+usermod -L -e 1 -s /sbin/nologin username
+
+# Remove or disable the authorized_keys file
+rm ~/.ssh/authorized_keys
+mv ~/.ssh/authorized_keys ~/.ssh/authorized_keys.disabled
+```
+
+You can also restrict SSH access in `/etc/ssh/sshd_config` using `DenyUsers username` or `AllowUsers user1 user2`, then validate and reload (`sshd -t && systemctl reload sshd`).
+
+## SFTP File Transfer
+
+Inside an `sftp` session, commands beginning with `l` operate on the local workstation rather than the remote server.
+
+| Task | SFTP Command |
+|---|---|
+| Upload a file to the remote system | `put file` |
+| Download a file from the remote system | `get file` |
+| Download a directory recursively | `get -r directory` |
+| List the remote or local directory | `ls` / `lls` |
+| Change the remote or local directory | `cd dir` / `lcd dir` |
+| Show the remote or local working directory | `pwd` / `lpwd` |
+| Exit the SFTP session | `quit` |

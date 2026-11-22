@@ -186,3 +186,27 @@ visudo -c
 | Schedule a reboot — template | `shutdown -r +<minutes> "message"` |
 | Schedule a reboot — example | `shutdown -r +15 "Scheduled maintenance reboot in 15 minutes"` |
 | Cancel a scheduled shutdown or reboot | `shutdown -c` |
+
+## `tmux`: Terminal Multiplexer
+
+Use `tmux` to keep long-running commands (such as SCAP scans) alive in the background so an SSH idle timeout does not kill them. Most `tmux` keyboard commands begin with `Ctrl-b` (for example, `Ctrl-b d` detaches from a session without stopping it).
+
+```bash
+# Install tmux
+yum install -y tmux
+
+# Start a new unnamed or named session
+tmux
+tmux new -s scap-scan
+
+# List active sessions
+tmux ls
+
+# Reattach to the last session, session 0, or a named session
+tmux a
+tmux attach -t 0
+tmux attach -t scap-scan
+
+# Kill a session
+tmux kill-session -t 0
+```
