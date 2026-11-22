@@ -115,6 +115,13 @@ chmod 0644 /etc/profile.d/custom_env.sh
 - `~/.bash_history` — Per-user command history
 - `~/.bash_logout` — Per-user logout actions
 
+After editing a shell configuration file, use `source` (or its POSIX shorthand `.`) to execute the file in your **current shell** rather than a subshell, applying changes like environment variables and aliases without logging out:
+
+```bash
+source ~/.bashrc
+. ~/.bashrc
+```
+
 ## Console Commands
 
 | Task | Command |

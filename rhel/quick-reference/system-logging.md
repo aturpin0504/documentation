@@ -113,7 +113,16 @@ journalctl --since "09:00:00" --until "15:00:00"
 
 ## Making `journald` Persistent
 
-By default, journal storage may be volatile and cleared during reboot. Configure persistent journal storage under `/var/log/journal`:
+{: .note }
+> STIG-hardened systems typically already enforce persistent journal storage by setting `Storage=persistent` in `/etc/systemd/journald.conf`. Verify before creating `/var/log/journal` manually.
+
+```bash
+# Verify whether journald is already configured for persistent storage
+grep -E '^Storage=' /etc/systemd/journald.conf
+ls -ld /var/log/journal
+```
+
+If not already configured, create persistent journal storage under `/var/log/journal`:
 
 ```bash
 # Create persistent journal directory

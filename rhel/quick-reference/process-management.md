@@ -34,6 +34,14 @@ ps aux | grep httpd
 
 # Find process IDs by name
 pgrep dd
+
+# Show PID and exact process name (comm) that pgrep matches by default
+ps -eo pid,comm
+
+# Preview pgrep matches (PID + name, exact match, or full command line)
+pgrep -l httpd
+pgrep -lx dd
+pgrep -af "app.py"
 ```
 
 ### `ps aux` vs. `ps -ef`
@@ -42,6 +50,18 @@ pgrep dd
 |---|---|---|
 | `ps aux` | BSD | Resource usage, including `%CPU` and `%MEM`. |
 | `ps -ef` | POSIX | Parent process ID (`PPID`). |
+
+### `pgrep` / `pkill` Matching Options
+
+| Option | Purpose |
+|---|---|
+| `-l` | List PID and process name (`comm`) |
+| `-x` | Match the exact process name only |
+| `-f` | Match against the full command line instead of `comm` |
+| `-a` | Print the full command line (commonly combined as `-af`) |
+
+{: .note }
+> `pgrep` and `pkill` perform substring matching on the 15-character `comm` name by default (for example, `pgrep dd` also matches `sshd` and `httpd`). Preview matches with `pgrep -l` or `pgrep -af` before running `pkill`.
 
 ## Process States
 

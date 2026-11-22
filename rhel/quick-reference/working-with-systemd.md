@@ -71,11 +71,19 @@ systemctl --failed --type=service
 # List available unit types
 systemctl -t help
 
-# Display unit file contents, properties, or dependencies
+# Display unit file contents, resolved properties, or dependencies
 systemctl cat <unit>
 systemctl show <unit>
+systemctl show -p MainPID --value <unit>
 systemctl list-dependencies <unit>
 ```
+
+### `systemctl cat` vs. `systemctl show`
+
+| Command | Output | Best Used When |
+|---|---|---|
+| `systemctl cat <unit>` | Raw unit file plus any drop-in override files (with `# /path/to/file` headers) | Reading configured directives or checking which overrides exist on disk |
+| `systemctl show <unit>` | All effective `Key=Value` properties (merged config, defaults, and runtime state) | Checking resolved values or querying a single property with `-p` |
 
 ## Modifying Unit Files
 

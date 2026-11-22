@@ -1,12 +1,12 @@
 ---
 layout: default
-title: Cron & At
+title: Cron
 parent: Quick Reference
 grand_parent: RHEL
 nav_order: 10
 ---
 
-# Cron and At Service Management
+# Cron Service Management
 
 ## Cron Service Overview
 
@@ -121,49 +121,17 @@ MAILTO=admin@example.com
 ## Cron Operational Checks
 
 - Allow a three-minute margin between saving a cron configuration and the intended execution time.
-- Scripts in `/etc/cron.hourly/`, `/etc/cron.daily/`, `/etc/cron.weekly/`, and `/etc/cron.monthly/` require execute permissions.
+- Scripts in `/etc/cron.hourly/`, `/etc/cron.daily/`, `/etc/cron.weekly/`, and `/etc/cron.monthly/` require execute permissions and **must not contain periods (`.`) or extensions like `.sh`** in their filenames (`run-parts` silently skips filenames with `.`).
 - No single command displays every scheduled cron job; check user crontabs (`crontab -l`), `/etc/crontab`, `/etc/cron.d/`, and `/etc/cron.{hourly,daily,weekly,monthly}/`.
 
 ```bash
-# Ensure drop-in cron scripts are executable
+# Ensure drop-in cron scripts are executable (no .sh extension)
 chmod +x /etc/cron.daily/example-script
+
+# Preview which scripts run-parts will actually execute
+run-parts --test /etc/cron.daily
 
 # Review /var/log/messages for cron activity
 grep cron /var/log/messages
 grep CROND /var/log/messages
-```
-
-## At Service: One-Time Task Scheduling
-
-The `at` service schedules commands to run once at a specified time. Ensure the `atd` service is running and scripts are executable before scheduling.
-
-```bash
-# Check the atd service status
-systemctl status atd
-
-# Schedule one-time jobs
-at 15:00
-at teatime
-at noon
-at tomorrow
-
-# View or remove scheduled at jobs
-atq
-atrm jobnumber
-
-# Execute a job when system load permits (typically below 0.8)
-batch
-```
-
-### Interactive `at` Session
-
-1. Start an `at` session with `at 15:00`.
-2. Enter the command or script path (e.g., `/path/to/script.sh`).
-3. Press `Ctrl-D` to close the `at` prompt and save the job.
-4. Verify with `atq`.
-
-```text
-$ at 15:00
-at> logger "One-time maintenance task started"
-at> <Ctrl-D>
 ```

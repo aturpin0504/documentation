@@ -55,32 +55,42 @@ hammer subscription refresh-manifest --organization "Your_Org"
 
 ## Repository and Subscription Management
 
+### Satellite Server vs. Satellite-Managed Hosts
+
+| System Role | How Repositories Are Managed | Primary Tool |
+|---|---|---|
+| **Satellite Server** | Registered directly to Red Hat CDN (plus any local custom `.repo` files under `/etc/yum.repos.d/`) | `subscription-manager` + `satellite-maintain` |
+| **Satellite-Managed Host** | Controlled centrally in Satellite Web UI (**Content Views**, **Activation Keys**, **Repository Sets**) | Satellite UI + `subscription-manager` (status/refresh) |
+
+On Satellite-managed hosts, `subscription-manager` automatically regenerates `/etc/yum.repos.d/redhat.repo`. Use `subscription-manager repos` for Red Hat/Satellite-managed repos, and `dnf config-manager` only for custom or third-party `.repo` files.
+
 ```bash
-# List enabled or all repositories
+# Register a host to Satellite using an organization and activation key
+subscription-manager register --org="<Your_Org>" --activationkey="<Your_Key>"
+
+# Force an immediate refresh of Satellite repository changes into redhat.repo
+subscription-manager refresh
+
+# Verify registration status and enabled repositories
+subscription-manager status
+subscription-manager repos --list-enabled
+subscription-manager repos --list
+
+# Temporarily enable or disable a Satellite/RHSM repo on a single host
+subscription-manager repos --enable=<repo-id>
+subscription-manager repos --disable=<repo-id>
+
+# Inspect repositories via dnf
 dnf repolist
 dnf repolist all
 dnf repoinfo <repo-id>
 
-# List enabled or all subscription-managed repositories
-subscription-manager repos --list-enabled
-subscription-manager repos --list
-
-# Enable or disable a subscription-managed repository
-subscription-manager repos --enable=<repo-id>
-subscription-manager repos --disable=<repo-id>
-
-# Enable or disable a .repo repository definition
+# Enable or disable a custom (non-RHSM) .repo definition
 dnf config-manager --enable <repo-id>
 dnf config-manager --disable <repo-id>
 
-# Register, attach, and inspect subscriptions
-subscription-manager register
+# Unregister a host
 subscription-manager unregister
-subscription-manager list --available
-subscription-manager attach --auto
-subscription-manager attach --pool=POOL_ID
-subscription-manager list --consumed
-subscription-manager status
 ```
 
 ## Custom Repositories
@@ -212,48 +222,74 @@ rm -f RPM-GPG-KEY-custom-private.asc ownertrust.txt
 ## Package Management with `dnf`
 
 ```bash
-# Install, remove, and update packages
+# Install a single package (prompts for confirmation)
 dnf install <pkg>
+
+# Install multiple packages at once
 dnf install pkg1 pkg2 pkg3
+
+# Install without prompting for confirmation
 dnf install -y <pkg>
+
+# Remove a package and its unused dependencies
 dnf remove <pkg>
+
+# Remove orphaned dependency packages no longer needed by any installed package
 dnf autoremove
+
+# Check for available updates without installing them (exits 100 if updates exist)
 dnf check-update
+
+# Update all installed packages
 dnf update
+
+# Update a specific package
 dnf update <pkg>
 
-# Clean and rebuild metadata cache
+# Clear all cached packages and repository metadata
 dnf clean all
+
+# Clear cached repository metadata only
 dnf clean metadata
+
+# Download and rebuild the repository metadata cache
 dnf makecache
 ```
 
 ### Search and Query Packages
 
 ```bash
-# Search package names/descriptions or all fields
+# Search package names and summaries
 dnf search <keyword>
+
+# Search package names, summaries, and full descriptions
 dnf search all <keyword>
+
+# Display detailed package metadata (version, repo, size, description)
 dnf info <pkg>
 
 # Find which package provides a file or command (e.g., semanage)
 dnf provides */<filename>
 dnf provides /usr/sbin/semanage
 
-# List all, specific, installed, available, or updatable packages
+# List all packages (installed + available) or a specific package
 dnf list
 dnf list <package>
+
+# List only installed, available, or updatable packages
 dnf list installed
 dnf list available
 dnf list updates
+
+# Filter available or installed packages by pattern
 dnf list available <pattern>
 dnf list installed <pattern>
 
-# Quickly search locally installed RPMs or list their files
+# Quickly search locally installed RPMs or list files installed by a package
 rpm -qa | grep <pattern>
 rpm -ql <pkg>
 
-# Query repository metadata without installing
+# Query repository metadata without installing (files, dependencies, or repo contents)
 dnf repoquery -l <package-name>
 dnf repoquery --requires <package-name>
 dnf repoquery --repo=<repo-name>
@@ -330,12 +366,20 @@ dnf history undo <id>
 dnf history redo <id>
 ```
 
-## Satellite Server Updates
+## Satellite Server Package Management and Updates
 
 {: .important }
-> Do not use direct `dnf update` for Satellite server updates when Satellite documentation and maintenance tooling require `satellite-maintain`. Direct updates can affect Satellite dependencies.
+> Satellite servers lock base OS packages (via `foreman-protector`) to protect Satellite dependencies. Do not run direct `dnf update` or `dnf install` on a Satellite server—use `satellite-maintain` instead.
 
 ```bash
+# Run Satellite health checks and update Satellite packages
 satellite-maintain health check
 satellite-maintain packages update
+
+# Install third-party or custom packages (e.g., an antivirus agent from a custom repo) on the Satellite server
+satellite-maintain packages install <package-name>
+
+# Only if manual dnf/yum intervention is required: unlock, run dnf, then immediately re-lock
+satellite-maintain packages unlock
+satellite-maintain packages lock
 ```
