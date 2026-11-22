@@ -19,21 +19,35 @@ systemctl reload sshd
 systemctl restart sshd
 ```
 
-| File | Purpose |
-|---|---|
-| `/etc/ssh/sshd_config` | Main SSH server configuration file (`sshd_config.d/` for drop-ins where supported). |
-| `/etc/ssh/ssh_config` | System-wide SSH client configuration. |
-| `~/.ssh/config` | Per-user SSH client configuration. |
-| `~/.ssh/known_hosts` | Server fingerprints for previously connected hosts. |
-| `~/.ssh/authorized_keys` | Public keys authorized to authenticate to the account. |
+| File / Directory | Owner | Mode | SELinux Type | Purpose |
+|---|---|---|---|---|
+| `/etc/ssh/sshd_config` | `root:root` | `0600` | `etc_t` | Main SSH server configuration file. |
+| `/etc/ssh/sshd_config.d/*.conf` | `root:root` | `0600` | `etc_t` | Server drop-in configs (directory: `0755`/`0700` `root:root`). |
+| `/etc/ssh/ssh_config` | `root:root` | `0644` | `etc_t` | System-wide SSH client configuration. |
+| `~/.ssh/` | `<user>:<user>` | `0700` | `ssh_home_t` | Per-user SSH directory. |
+| `~/.ssh/authorized_keys` | `<user>:<user>` | `0600` | `ssh_home_t` | Public keys authorized to authenticate to the account. |
+| `~/.ssh/config` | `<user>:<user>` | `0600` | `ssh_home_t` | Per-user SSH client configuration. |
+| `~/.ssh/known_hosts` | `<user>:<user>` | `0600` / `0644` | `ssh_home_t` | Server fingerprints for previously connected hosts. |
 
 ## Login Messages
 
-| File | Display Time | Description |
-|---|---|---|
-| `/etc/motd` | After login | Message of the Day; displayed for shell logins. |
-| `/etc/issue` | Before login | Console login message. |
-| `/etc/issue.net` | Before login | SSH or network login message. |
+| File | Owner | Mode | SELinux Type | Display Time / Purpose |
+|---|---|---|---|---|
+| `/etc/motd` | `root:root` | `0644` | `etc_t` | After login — Message of the Day for shell logins. |
+| `/etc/issue` | `root:root` | `0644` | `etc_t` | Before login — Console login message. |
+| `/etc/issue.net` | `root:root` | `0644` | `etc_t` | Before login — SSH or network login message. |
+
+### Verifying Ownership, Permissions, and SELinux Context
+
+Editing an existing file in place (`vi`/`vim`) preserves ownership, permissions, and SELinux context. However, **moving** a file into `/etc/` (`mv /tmp/file /etc/...`), creating a new file under a strict `umask`, or using tools that write a temporary file and rename it can change them. Always check before and after:
+
+```bash
+# Check ownership, permissions, and SELinux context
+ls -lZ /etc/ssh/sshd_config /etc/issue /etc/issue.net
+
+# Restore the expected SELinux context if it changed
+restorecon -v /etc/ssh/sshd_config
+```
 
 ## SSH Server Configuration
 
