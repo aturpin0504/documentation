@@ -43,11 +43,11 @@ A Subscription Manifest (`.zip`) carries Red Hat entitlements and CDN certificat
 
 ### Export a Manifest
 
-In the Red Hat Hybrid Cloud Console:
-
-1. Navigate to **Subscriptions** → **Allocations**.
-2. Select the Satellite allocation.
-3. Select **Export Manifest** to download the `.zip` file.
+1. Go to <https://console.redhat.com/subscriptions/manifests>.
+2. Locate or create the manifest allocation for the correct Red Hat Satellite version.
+3. Select the **ellipsis** (`⋮`) next to the manifest allocation.
+4. Select **Export**.
+5. Download the generated `.zip` file and use it to import the manifest into Satellite
 
 ### Import a Manifest into Satellite
 
