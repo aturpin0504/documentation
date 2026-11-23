@@ -31,6 +31,36 @@ File system hierarchy, mounting, navigation, permissions, SELinux context, searc
 | `/usr` | User binaries (`/usr/bin`), administrative binaries (`/usr/sbin`), libraries (`/usr/lib64`), and related program files. On modern RHEL, `/bin`, `/sbin`, `/lib`, and `/lib64` are commonly symbolic links into `/usr`. |
 | `/var` | Variable data, including logs (`/var/log`), caches, spool files, databases, and `/var/tmp`. |
 
+## Disk Usage
+
+Use `df` to view free space by mounted filesystem. Use `du` to identify which directories or files consume disk space.
+
+```bash
+# Show disk-space usage for mounted filesystems
+df -h
+
+# Show total size of the current directory
+du -sh .
+
+# Show size of a specific directory
+du -sh /var/log
+
+# Show sizes of immediate subdirectories in the current directory
+du -sh */
+
+# Show first-level directories under /var, sorted from smallest to largest
+du -sh /var/* | sort -h
+
+# Show the 10 largest entries under /var
+du -ah /var | sort -h | tail -n 10
+
+# Stay on the current filesystem; do not cross into mounted filesystems
+du -xsh /var
+```
+
+{: .important }
+> Use `df -h` to find a full filesystem, then use `du -xsh /path` and `du -sh /path/*` to identify the directories consuming space on that filesystem.
+
 ## Mounting, Unmounting, and `/etc/fstab`
 
 A **mount point** is a directory where Linux attaches another file system to the existing directory tree.
