@@ -41,9 +41,23 @@ If `satellite-maintain packages update` fails due to missing repositories or dep
 
 A Subscription Manifest (`.zip`) carries Red Hat entitlements and CDN certificates from the Red Hat Hybrid Cloud Console into Satellite, allowing Satellite to synchronize Red Hat repositories.
 
-1. **Export:** In the Red Hat Hybrid Cloud Console, go to **Subscriptions** → **Allocations**, select the Satellite allocation, and click **Export Manifest**.
-2. **Import (Web UI):** **Content** → **Subscriptions** → **Manage Manifest** → **Upload**.
-3. **Import or Refresh (Hammer CLI):**
+### Export a Manifest
+
+In the Red Hat Hybrid Cloud Console:
+
+1. Navigate to **Subscriptions** → **Allocations**.
+2. Select the Satellite allocation.
+3. Select **Export Manifest** to download the `.zip` file.
+
+### Import a Manifest into Satellite
+
+**Web UI:**
+
+```text
+Content → Subscriptions → Manage Manifest → Upload
+```
+
+**Hammer CLI:**
 
 ```bash
 # Import a manifest
