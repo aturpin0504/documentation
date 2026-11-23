@@ -2,7 +2,7 @@
 layout: default
 title: Active Directory
 has_children: true
-has_toc: false
+nav_order: 2
 ---
 
 # Active Directory Documentation
