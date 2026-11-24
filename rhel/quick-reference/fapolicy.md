@@ -77,6 +77,88 @@ ls -1 /etc/fapolicyd/rules.d/
 fapolicyd-cli --list
 ```
 
+## Ownership, Permissions, and SELinux Context
+
+fapolicyd rules, trust files, and configuration files are security-sensitive. They must not be writable by unprivileged users or application accounts.
+
+When editing existing files in `/etc/fapolicyd/` as `root`, ownership, permissions, and SELinux context normally remain unchanged. Verify metadata when files are copied, restored, created by automation, or moved from another directory.
+
+```bash
+# Review ownership, mode, and SELinux context for fapolicyd configuration
+ls -lZ /etc/fapolicyd/
+ls -lZ /etc/fapolicyd/rules.d/
+ls -lZ /etc/fapolicyd/trust.d/
+
+# Show expected SELinux context for a new rule file
+matchpathcon /etc/fapolicyd/rules.d/80-local.rules
+
+# Show expected SELinux context for a new trust file
+matchpathcon /etc/fapolicyd/trust.d/myapp
+
+# Restore policy-defined SELinux labels after copying or restoring files
+restorecon -RFv /etc/fapolicyd/
+```
+
+### New Rule and Trust Files
+
+When creating a new file, copy the ownership and permissions of a comparable existing file instead of guessing.
+
+```bash
+# Inspect a similar existing rule file
+ls -lZ /etc/fapolicyd/rules.d/90-deny-execute.rules
+
+# Inspect a similar existing trust file
+ls -lZ /etc/fapolicyd/trust.d/
+
+# Create a local rule file
+touch /etc/fapolicyd/rules.d/80-local.rules
+
+# Match the owner and group used by existing local rule files
+chown root:fapolicyd /etc/fapolicyd/rules.d/80-local.rules
+
+# Restore the expected SELinux context
+restorecon -v /etc/fapolicyd/rules.d/80-local.rules
+```
+
+{: .warning }
+> Do not make fapolicyd configuration, trust, or rule files writable by non-root users, application accounts, or shared groups. An unauthorized change to a trust file or allow rule can weaken application allow-listing controls.
+
+### Application File Paths
+
+Trusting or allowing an application path in fapolicyd does not change the path's Linux ownership, permissions, or SELinux context.
+
+For example, a web application under `/var/www/html/` must still have ownership, permissions, and SELinux labels that allow the web server to read or modify the necessary content.
+
+```bash
+# Review metadata for an application directory
+ls -ldZ /var/www/html/password/
+
+# Review files below the application directory
+ls -lZ /var/www/html/password/
+
+# Restore standard SELinux labels for content under /var/www/html/
+restorecon -RFv /var/www/html/password/
+```
+
+{: .note }
+> Use `restorecon` for files under standard paths such as `/var/www/html/`. If an application uses a nonstandard path, define an approved persistent SELinux file-context rule with `semanage fcontext`, then apply it with `restorecon`.
+
+### Generated Files
+
+Do not manually edit the generated rule file:
+
+```text
+/etc/fapolicyd/compiled.rules
+```
+
+Modify source files under `/etc/fapolicyd/rules.d/`, then regenerate and reload the compiled rules:
+
+```bash
+fagenrules --check
+fagenrules --load
+fapolicyd-cli --reload-rules
+```
+
 ## Trust Sources and Rule Types
 
 | Method | Best Use Case |
