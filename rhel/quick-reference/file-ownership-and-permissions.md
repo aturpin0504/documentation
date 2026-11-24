@@ -23,9 +23,8 @@ chown user file
 # Recursively change user owner
 chown -R user /dir
 
-# Change user and group owner (colon or period works as separator)
+# Change user and group owner
 chown user:group file
-chown user.group file
 
 # Change only group owner
 chown :group file
@@ -36,6 +35,8 @@ chown -R :group /dir
 # Recursively change user and group owner
 chown -R user:group /dir
 ```
+
+> Use the `user:group` form for user and group ownership changes. GNU `chown` also accepts a period as a separator in some cases, but the colon form is clearer and avoids ambiguity.
 
 ### File Creation Defaults
 
@@ -61,9 +62,9 @@ The system applies the first applicable permission class. When ACLs are present,
 
 | Permission | Symbol | Value | Files | Directories |
 |---|---:|---:|---|---|
-| Read | `r` | 4 | Open and read file contents | List directory contents |
-| Write | `w` | 2 | Modify file contents | Create or delete directory entries |
-| Execute | `x` | 1 | Run the file as a program or script | Enter the directory with `cd` |
+| Read | `r` | 4 | Open and read file contents | List directory entry names |
+| Write | `w` | 2 | Modify file contents | Create, rename, or delete directory entries when combined with execute permission |
+| Execute | `x` | 1 | Run the file as a program or script | Enter or traverse the directory; access items within it when their permissions allow |
 
 ## `chmod` Numeric Mode
 
@@ -75,6 +76,7 @@ The system applies the first applicable permission class. When ACLs are present,
 | `6` | `rw-` | Read and write (`4 + 2`) |
 | `5` | `r-x` | Read and execute (`4 + 1`) |
 | `4` | `r--` | Read only |
+| `0` | `---` | No permissions |
 
 ```bash
 # Set rwxr-xr-x
@@ -113,7 +115,8 @@ chmod +x file
 # Set exact permissions
 chmod u=rwx,g=rx,o= file
 
-# Recursively add read for others and execute only on directories or already-executable files
+# Recursively add read for others and execute only on directories
+# or files that are already executable
 chmod -R o+rX /data
 ```
 
@@ -123,29 +126,35 @@ Uppercase `X` sets execute permission only for directories and files that alread
 
 | Permission | Numeric | Symbolic | Effect on Files | Effect on Directories |
 |---|---:|---|---|---|
-| SUID | 4 | `u+s` | Executes with the file owner's permissions | No effect |
-| SGID | 2 | `g+s` | Executes with the file group's permissions | New files inherit the directory's group owner |
-| Sticky bit | 1 | `+t` | No effect | Users cannot delete files owned by other users |
+| SUID | 4 | `u+s` | Program executes with the file owner's effective permissions | Generally no useful effect |
+| SGID | 2 | `g+s` | Program executes with the file group's effective permissions | New files and subdirectories inherit the directory's group owner |
+| Sticky bit | 1 | `+t` | No effect | Users can delete or rename only their own files, unless they own the directory or have elevated privileges |
 
 ```bash
-# Set SUID with rwxr-xr-x (numeric and symbolic)
+# Set SUID on an executable file
 chmod 4755 file
 chmod u+s file
 
-# Set SGID with rwxrwx--- (numeric and symbolic)
+# Set SGID on a shared directory
 chmod 2770 /dir
 chmod g+s /dir
 
-# Set sticky bit with rwxrwxrwx (numeric and symbolic)
+# Set the sticky bit on a public shared directory
 chmod 1777 /dir
 chmod +t /dir
 ```
 
-When viewing permissions with `ls -l`, a sticky bit appears as `t` in the execute position for `others`.
+When viewing permissions with `ls -l`:
+
+- SUID appears as `s` or `S` in the user execute position.
+- SGID appears as `s` or `S` in the group execute position.
+- The sticky bit appears as `t` or `T` in the others execute position.
+
+Uppercase `S` or `T` indicates that the special bit is set but the corresponding execute permission is not set.
 
 ## Access Control Lists (ACLs)
 
-ACLs provide more granular permissions than the standard user/group/other permission model.
+ACLs provide more granular permissions than the standard user/group/other permission model. They allow permissions for additional named users and groups without changing the file owner or owning group.
 
 ### ACL Syntax
 
@@ -165,43 +174,44 @@ ACLs provide more granular permissions than the standard user/group/other permis
 # Display ACLs, including effective permissions
 getfacl file
 
+# Grant a user read, write, and execute access
+setfacl -m u:username:rwx file
+
+# Grant a group read and execute access to a directory
+setfacl -m g:groupname:rx /dir
+
 # Set the ACL mask explicitly
 setfacl -m m::rw- file
 
-# Set a default ACL for newly created files
+# Remove all permissions for others
+setfacl -m o::--- file
+
+# Apply a group ACL recursively:
+# rw for files; add x only to directories and already-executable files
+setfacl -R -m g:sales:rwX /data
+
+# Set a named-group default ACL for newly created content
 setfacl -m d:g:sales:rwx /dir
 
 # Set default owner, group, and others permissions for new content
 setfacl -d -m u::rwx,g::rwx,o::--- /dir
 
-# Remove all default ACL entries from a directory
-setfacl -k /dir
-
-# Grant a user rwx access
-setfacl -m u:username:rwx file
-
-# Grant a group rx access
-setfacl -m g:groupname:rx /dir
-
-# Remove all permissions for others
-setfacl -m o::- file
-
-# Apply a group ACL recursively to existing files
-setfacl -R -m g:sales:rw /data
-
 # Remove a specific ACL entry
 setfacl -x u:username file
 
-# Remove all ACLs
+# Remove all default ACL entries from a directory
+setfacl -k /dir
+
+# Remove extended ACL entries
 setfacl -b file
 ```
 
 {: .note }
-> `ls -l` displays a `+` after the normal permission bits when ACLs are present (for example, `-rwxrwx---+`). If needed, include the `acl` mount option in `/etc/fstab` for the relevant file system.
+> `ls -l` displays a `+` after the normal permission bits when an extended ACL is present, for example `-rwxrwx---+`. Use `getfacl file` or `getfacl /directory` to view ACL entries and effective permissions.
 
 ### Default ACLs, SGID, and `umask`
 
-SGID, default ACLs, and `umask` control different parts of file creation:
+SGID, default ACLs, and `umask` control different parts of file creation.
 
 | Feature | Controls | Does Not Control |
 |---|---|---|
@@ -211,7 +221,9 @@ SGID, default ACLs, and `umask` control different parts of file creation:
 
 When a directory does not have a default ACL, the creating process's `umask` modifies the requested creation permissions.
 
-When a directory has a default ACL, new content inherits that ACL instead of applying `umask` in the normal manner. The creating program's requested mode can still restrict the final permissions. For example, ordinary files are normally created with a requested mode of `666`, so they do not automatically receive execute permission even if the directory's default ACL includes `x`.
+When a directory has a default ACL, new content inherits that ACL instead of applying `umask` in the normal manner. The creating program's requested mode can still restrict the final permissions.
+
+For example, ordinary files are normally created with a requested mode of `666`, so they do not automatically receive execute permission even if the directory's default ACL includes `x`. New directories are normally created with a requested mode of `777` and can inherit execute permission.
 
 > **Recommendation:** Use SGID alone for a simple shared directory when all creators use a collaborative `umask`. Add a default ACL when you need consistent inherited permissions across users or services with different `umask` values.
 
@@ -237,6 +249,9 @@ Conceptually:
 # Display current umask
 umask
 
+# Display umask in symbolic form
+umask -S
+
 # Set umask for the current shell session
 umask 022
 umask 027
@@ -245,21 +260,22 @@ umask 077
 
 ### Configure `umask` Persistently
 
-| Scope | Location |
+| Scope | Typical Bash Configuration Location |
 |---|---|
-| Default system setting | `/etc/bashrc` |
-| All users | Create a file such as `/etc/profile.d/umask.sh` |
-| One user | Add the setting to the user's `~/.bash_profile` |
+| System-wide Bash shell setting | `/etc/bashrc` |
+| System-wide login-shell setting | A file such as `/etc/profile.d/umask.sh` |
+| One user's interactive Bash shells | `~/.bashrc` |
+| One user's Bash login shells | `~/.bash_profile` |
 
-Common practice is `umask 027` for `root` and `umask 022` (or `027` in hardened baselines) for normal users.
+For system-wide configuration, follow the organization's approved RHEL baseline and account-management policy. A typical baseline uses a more restrictive `umask` for privileged accounts and may use `022` or `027` for standard accounts, depending on collaboration and security requirements.
 
 ## Extended Attributes
 
 | Attribute | Symbol | Effect |
 |---|---|---|
-| Immutable | `i` | File cannot be modified, deleted, or renamed. |
-| Append-only | `a` | Data can only be appended to the file. |
-| No atime update | `A` | Access-time updates are disabled, which can improve performance. |
+| Immutable | `i` | File cannot be modified, deleted, renamed, or linked. |
+| Append-only | `a` | Existing file data cannot be changed; data can only be appended. |
+| No atime update | `A` | Access-time updates are disabled. |
 
 ```bash
 # List file attributes
@@ -269,28 +285,47 @@ lsattr file
 chattr +i file
 chattr -i file
 
-# Set append-only attribute
+# Set or remove append-only attribute
 chattr +a file
+chattr -a file
 
 # Disable access-time updates
 chattr +A file
 ```
 
-If needed, add the `user_xattr` mount option in `/etc/fstab` for the applicable file system.
+> Extended attributes and filesystem attributes depend on the filesystem type and mount configuration. Verify support before relying on them in an operational workflow.
 
 ## Common Permission Scenarios
 
 ### Create a Shared Group Directory
 
+Use SGID when new content should inherit the directory's group owner.
+
 ```bash
 # Create the shared directory
 mkdir /data/sales
 
-# Set group ownership
+# Set the shared group owner
 chown root:sales /data/sales
 
-# Enable SGID (so new files inherit the sales group) and grant user/group access
+# Grant owner and group full access; enable SGID group inheritance
 chmod 2770 /data/sales
+```
+
+New files and subdirectories created in `/data/sales` inherit the `sales` group.
+
+SGID alone is sufficient when users and services create files with a `umask` that preserves the required group permissions. To enforce inherited group access despite differing `umask` values, add a default ACL:
+
+```bash
+# Set default permissions for newly created files and directories
+setfacl -d -m u::rwx,g::rwx,o::--- /data/sales
+```
+
+Verify ownership, SGID, and ACL settings:
+
+```bash
+ls -ld /data/sales
+getfacl /data/sales
 ```
 
 ### Create a Public Shared Directory
@@ -303,6 +338,8 @@ mkdir /data/public
 chmod 1777 /data/public
 ```
 
+The sticky bit allows users to create files in the directory but prevents them from deleting or renaming files owned by other users.
+
 ### Grant Cross-Group Access with ACLs
 
 ```bash
@@ -311,4 +348,21 @@ setfacl -m g:account:rx /data/sales
 
 # Allow the sales group to read and enter the account directory
 setfacl -m g:sales:rx /data/account
+```
+
+### Grant a User Access Without Changing Ownership
+
+```bash
+# Allow a specific user to read and modify a file
+setfacl -m u:username:rw- file
+
+# Allow a specific user to enter and modify content in a directory
+setfacl -m u:username:rwx /data/project
+```
+
+Verify the result:
+
+```bash
+getfacl file
+getfacl /data/project
 ```
