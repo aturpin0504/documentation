@@ -188,8 +188,13 @@ ps -eo pid,user,comm,vsz,rss --sort=-vsz | head -n 11
 | `SwapTotal` | Total configured swap space. |
 | `SwapFree` | Unused swap space. |
 | `%MEM` | Percentage of physical memory used by a process. |
-| `RSS` or `RES` | Resident Set Size: physical memory currently used by a process and not swapped out. |
-| `VSZ` or `VIRT` | Virtual address space assigned to a process; not the same as physical memory consumption. |
+| `RSS` or `RES` | Resident Set Size: physical memory currently used by a process; shared pages can appear in multiple processes' RSS values. |
+| `VSZ` or `VIRT` | Total virtual address space assigned to a process; not the same as physical memory consumption. |
+
+{: .note }
+> **Resident versus virtual memory:** `RSS` (also shown as `RES` in `top`) is the portion of a process's memory currently resident in physical RAM. `VSZ` (also shown as `VIRT` in `top`) is the process's total virtual address space, which can include allocated-but-unused memory, mapped files, shared libraries, and swapped memory. A large `VSZ` value does not necessarily mean the process is consuming that amount of physical RAM.
+>
+> RSS values can also overstate total system memory use when processes share libraries or shared-memory regions, because the same shared pages can be reflected in multiple processes' RSS values.
 
 > **Interpretation:** Low `free` memory alone is not necessarily a problem. Linux uses otherwise idle RAM for filesystem cache. Focus on `available` memory, swap activity, sustained paging, and application behavior when evaluating memory pressure.
 
