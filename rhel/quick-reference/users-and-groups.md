@@ -57,13 +57,22 @@ useradd -D -s /sbin/nologin
 useradd -D -b /home
 ```
 
-### Default Configuration Files
+### Key User and Group Configuration Files
 
 | File or Directory | Purpose |
 |---|---|
-| `/etc/default/useradd` | Default values used by `useradd`, including `SHELL`, `HOME`, `INACTIVE`, `SKEL`, and `CREATE_MAIL_SPOOL`. |
+| `/etc/passwd` | Local user accounts: username, UID, primary GID, GECOS field, home directory, and login shell. |
+| `/etc/shadow` | Local password hashes and password/account-aging fields. |
+| `/etc/group` | Local group definitions and explicit secondary-group members. |
+| `/etc/gshadow` | Secure group passwords and group-administrator information. |
+| `/etc/default/useradd` | Default values used by `useradd`, including the default shell, home-directory base, inactive period, skeleton directory, and mail-spool behavior. |
 | `/etc/skel/` | Template files, such as `.bashrc` and `.bash_profile`, copied into newly created user home directories. |
-| `/etc/login.defs` | System-wide defaults for user creation, UID/GID ranges, `UMASK`/`HOME_MODE`, and password aging. |
+| `/etc/login.defs` | System-wide defaults for user creation, UID/GID ranges, `UMASK` or `HOME_MODE`, and password aging. |
+| `/etc/security/pwquality.conf` | Password-complexity requirements. |
+| `/etc/security/pwquality.conf.d/*.conf` | Drop-in password-complexity configuration files. |
+| `/etc/security/pwhistory.conf` | Password-history settings, when configured separately from PAM. |
+| `/etc/security/faillock.conf` | Account-lockout thresholds and failed-login tally configuration. |
+| `/etc/nologin` | Prevents non-root logins when present. |
 
 {: .note }
 > When `useradd -m` creates a home directory, the directory's mode comes from `HOME_MODE` or `UMASK` in `/etc/login.defs`, but files copied from `/etc/skel/` **preserve their source permissions** from `/etc/skel/`. Because package defaults often leave `/etc/skel/.bash*` at `0644`, restrict `/etc/skel/` permissions (and remediate existing users) to meet STIG requirements.
@@ -435,23 +444,6 @@ cp /etc/shadow /etc/shadow.backup
 cp /etc/group /etc/group.backup
 cp /etc/gshadow /etc/gshadow.backup
 ```
-
-## Key User and Group Configuration Files
-
-| File or Directory | Purpose |
-|---|---|
-| `/etc/passwd` | Local user accounts: username, UID, primary GID, GECOS field, home directory, and login shell. |
-| `/etc/shadow` | Local password hashes and password/account-aging fields. |
-| `/etc/group` | Local group definitions and explicit secondary-group members. |
-| `/etc/gshadow` | Secure group passwords and group-administrator information. |
-| `/etc/login.defs` | System-wide defaults for user creation, UID/GID ranges, UMASK, and password aging. |
-| `/etc/default/useradd` | Default `useradd` settings, including shell, home base, inactive period, and skeleton directory. |
-| `/etc/skel/` | Files copied into newly created user home directories. |
-| `/etc/security/pwquality.conf` | Password-complexity requirements. |
-| `/etc/security/pwquality.conf.d/*.conf` | Drop-in password-complexity configuration files. |
-| `/etc/security/pwhistory.conf` | Password-history settings (when configured separately from PAM). |
-| `/etc/security/faillock.conf` | Account-lockout thresholds and failed-login tally location. |
-| `/etc/nologin` | Prevents non-root logins when present. |
 
 ## Practical Tips
 
