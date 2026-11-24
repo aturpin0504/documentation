@@ -607,25 +607,18 @@ dnf history redo <id>
 {: .warning}
 > Review the transaction details and dependency changes before using `dnf history undo`. Some transactions cannot be fully reversed if later package changes depend on them.
 
-## Satellite Server Package Management and Updates
+## Satellite Server Administration
 
 {: .important}
-> Satellite servers protect base operating system packages through `foreman-protector` to preserve Satellite dependencies. Do not run direct `dnf update` or `dnf install` on a Satellite server unless following an approved maintenance procedure. Use `satellite-maintain` for Satellite package maintenance.
+> Satellite servers have additional lifecycle, dependency, backup, and maintenance requirements. Do not use direct `dnf update` or `dnf install` for routine Satellite maintenance unless following an approved procedure.
 
-```bash
-# Run Satellite health checks
-satellite-maintain health check
+Use the dedicated **Satellite Management** reference for:
 
-# Update Satellite packages
-satellite-maintain packages update
-
-# Install an approved third-party or custom package
-satellite-maintain packages install <package-name>
-
-# Only if manual dnf/yum intervention is specifically required:
-# unlock, perform the approved action, then immediately re-lock
-satellite-maintain packages unlock
-satellite-maintain packages lock
-```
+- Health checks and service status
+- Satellite and underlying operating system patch updates
+- Satellite version upgrades
+- Backup and recovery procedures
+- Approved package installation
+- Repository prerequisites for Satellite maintenance
 
 Satellite supports importing a custom public GPG key as a Content Credential and associating it with custom content; RHEL documents `rpm-sign`/`rpm --addsign`, public-key export, and `%_gpg_name` configuration for package signing. 
