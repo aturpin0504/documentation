@@ -3,7 +3,7 @@ layout: default
 title: Advanced Recovery
 parent: Quick Reference
 grand_parent: RHEL
-nav_order: 21
+nav_order: 22
 ---
 
 # Rescue Boot and GRUB Recovery

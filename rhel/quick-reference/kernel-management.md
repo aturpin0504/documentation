@@ -3,7 +3,7 @@ layout: default
 title: Kernel Management
 parent: Quick Reference
 grand_parent: RHEL
-nav_order: 19
+nav_order: 20
 ---
 
 # Kernel Information and Management

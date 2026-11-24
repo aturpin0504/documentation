@@ -3,7 +3,7 @@ layout: default
 title: SELinux
 parent: Quick Reference
 grand_parent: RHEL
-nav_order: 17
+nav_order: 18
 ---
 
 # SELinux Fundamentals

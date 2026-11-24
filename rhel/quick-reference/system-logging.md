@@ -3,7 +3,7 @@ layout: default
 title: System Logging
 parent: Quick Reference
 grand_parent: RHEL
-nav_order: 9
+nav_order: 10
 ---
 
 # System Logging Services

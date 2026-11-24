@@ -3,7 +3,7 @@ layout: default
 title: Boot Troubleshooting
 parent: Quick Reference
 grand_parent: RHEL
-nav_order: 20
+nav_order: 21
 ---
 
 # Boot Procedure and Troubleshooting

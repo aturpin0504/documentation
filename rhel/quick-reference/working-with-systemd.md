@@ -3,7 +3,7 @@ layout: default
 title: systemd
 parent: Quick Reference
 grand_parent: RHEL
-nav_order: 8
+nav_order: 9
 ---
 
 # systemd Units and Targets

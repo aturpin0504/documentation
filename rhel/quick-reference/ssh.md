@@ -3,7 +3,7 @@ layout: default
 title: SSH & SFTP
 parent: Quick Reference
 grand_parent: RHEL
-nav_order: 13
+nav_order: 14
 ---
 
 # SSH Management and Hardening

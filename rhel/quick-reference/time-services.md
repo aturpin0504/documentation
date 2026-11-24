@@ -3,7 +3,7 @@ layout: default
 title: Time Services
 parent: Quick Reference
 grand_parent: RHEL
-nav_order: 11
+nav_order: 12
 ---
 
 # Time Synchronization with `timedatectl` and Chrony

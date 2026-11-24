@@ -3,7 +3,7 @@ layout: default
 title: LVM
 parent: Quick Reference
 grand_parent: RHEL
-nav_order: 16
+nav_order: 17
 ---
 
 # Understanding Logical Volume Manager (LVM)
