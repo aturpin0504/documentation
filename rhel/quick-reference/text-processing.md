@@ -226,13 +226,6 @@ mv file-new file
 >
 > This modifies `file` and retains the original content as `file.bak`.
 
-{: .tip }
-> **Preview before using `sed -i`**
->
-> By default, `sed` writes modified output to standard output and does not change the source file.
->
-> Test the command without `-i` first. Add `-i` only after confirming the output is correct. Use `-i.bak` when you want a backup copy before editing.
-
 ## `awk`: Working with Columns and Fields
 
 Use `awk` for column-based data, especially when fields are separated by variable spaces or tabs, or when filtering based on a field value.
