@@ -8,26 +8,26 @@ nav_order: 7
 
 # Package and Satellite Management
 
-Daily package management with `dnf` and `rpm`, module streams, custom repositories, STIG-aligned GPG signing, and Red Hat Satellite maintenance.
+Daily package management with `dnf` and `rpm`, module streams, custom repositories, GPG package signing, and Red Hat Satellite maintenance.
 
 {: .note}
-> This guide uses `dnf` as the primary package-management command (`yum` is a symlink to `dnf` on systems where it is present).
+> This guide uses `dnf` as the primary package-management command. On systems where `yum` is present, it is typically a compatibility link to `dnf`.
 
 ## Satellite Server Registration and Required Repositories
 
-If a Satellite server must be rebuilt, register it to Red Hat CDN and enable only the BaseOS, AppStream, Satellite, and Satellite Maintenance repositories matching your RHEL major version (`<rhel_ver>`, for example, `9` or `10`) and Satellite version (`<sat_ver>`):
+If a Satellite server must be rebuilt, register it to Red Hat CDN and enable only the BaseOS, AppStream, Satellite, and Satellite Maintenance repositories matching the applicable RHEL major version (`<rhel_ver>`, for example, `9`) and Satellite version (`<sat_ver>`).
 
 ```bash
-# 1. Register the host to Red Hat
+# Register the host to Red Hat
 subscription-manager register --username <rh_user> --auto-attach
 
-# 2. Disable all repositories first to avoid conflicts
+# Disable all repositories first to avoid conflicts
 subscription-manager repos --disable "*"
 
-# 3. Verify exact repository IDs for your RHEL and Satellite versions if needed
+# Verify exact repository IDs for the installed RHEL and Satellite versions
 subscription-manager repos --list | grep -E "baseos-rpms|appstream-rpms|satellite-"
 
-# 4. Enable required RHEL and Satellite repositories
+# Enable required RHEL and Satellite repositories
 subscription-manager repos \
   --enable=rhel-<rhel_ver>-for-x86_64-baseos-rpms \
   --enable=rhel-<rhel_ver>-for-x86_64-appstream-rpms \
@@ -35,7 +35,7 @@ subscription-manager repos \
   --enable=satellite-maintenance-<sat_ver>-for-rhel-<rhel_ver>-x86_64-rpms
 ```
 
-If `satellite-maintain packages update` fails because of missing repositories or dependencies, verify that all four repositories above are enabled.
+If `satellite-maintain packages update` fails because of missing repositories or dependencies, verify that the required BaseOS, AppStream, Satellite, and Satellite Maintenance repositories are enabled.
 
 ## Subscription Manifests
 
@@ -61,10 +61,13 @@ Content → Subscriptions → Manage Manifest → Upload
 
 ```bash
 # Import a manifest
-hammer subscription upload --file ~/manifest.zip --organization "Your_Org"
+hammer subscription upload \
+  --file ~/manifest.zip \
+  --organization "<organization>"
 
 # Refresh after adding or renewing subscriptions
-hammer subscription refresh-manifest --organization "Your_Org"
+hammer subscription refresh-manifest \
+  --organization "<organization>"
 ```
 
 ## Repository and Subscription Management
@@ -73,16 +76,18 @@ hammer subscription refresh-manifest --organization "Your_Org"
 
 | System Role | How Repositories Are Managed | Primary Tool |
 |---|---|---|
-| **Satellite Server** | Registered directly to Red Hat CDN, plus any local custom `.repo` files under `/etc/yum.repos.d/` | `subscription-manager` and `satellite-maintain` |
-| **Satellite-Managed Host** | Controlled centrally in Satellite Web UI through **Content Views**, **Activation Keys**, and **Repository Sets** | Satellite UI and `subscription-manager` |
+| **Satellite Server** | Registered directly to Red Hat CDN, plus approved local custom `.repo` files under `/etc/yum.repos.d/` | `subscription-manager` and `satellite-maintain` |
+| **Satellite-Managed Host** | Controlled centrally through Content Views, Activation Keys, Lifecycle Environments, and Repository Sets | Satellite UI and `subscription-manager` |
 
-On Satellite-managed hosts, `subscription-manager` automatically regenerates `/etc/yum.repos.d/redhat.repo`. Use `subscription-manager repos` for Red Hat or Satellite-managed repositories, and use `dnf config-manager` only for custom or third-party `.repo` files.
+On Satellite-managed hosts, `subscription-manager` regenerates `/etc/yum.repos.d/redhat.repo`. Use `subscription-manager repos` for Red Hat or Satellite-managed repositories. Use `dnf config-manager` only for custom or third-party `.repo` files.
 
 ```bash
 # Register a host to Satellite using an organization and activation key
-subscription-manager register --org="<Your_Org>" --activationkey="<Your_Key>"
+subscription-manager register \
+  --org="<organization>" \
+  --activationkey="<activation_key>"
 
-# Force an immediate refresh of Satellite repository changes into redhat.repo
+# Force an immediate refresh of repository entitlement data
 subscription-manager refresh
 
 # Verify registration status and enabled repositories
@@ -90,7 +95,7 @@ subscription-manager status
 subscription-manager repos --list-enabled
 subscription-manager repos --list
 
-# Temporarily enable or disable a Satellite/RHSM repository on a single host
+# Temporarily enable or disable a Satellite/RHSM repository on one host
 subscription-manager repos --enable=<repo-id>
 subscription-manager repos --disable=<repo-id>
 
@@ -113,7 +118,7 @@ subscription-manager unregister
 # Add a repository definition from a URL
 dnf config-manager --add-repo https://example.com/custom/custom.repo
 
-# Or create a .repo file manually
+# Or create a repository file manually
 vi /etc/yum.repos.d/custom.repo
 
 # Modify a repository option persistently
@@ -129,7 +134,7 @@ dnf clean all
 ```ini
 [repo-id]
 name=Repository Display Name
-baseurl=https://satellite.example.com/pulp/content/ORG/Library/custom/path/
+baseurl=https://satellite.example.example/pulp/content/<organization>/Library/custom/path/
 enabled=1
 gpgcheck=1
 gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-custom
@@ -149,42 +154,71 @@ sslverify=1
 {: .warning}
 > Do not disable `gpgcheck` or `sslverify` unless specifically authorized by organizational policy and the associated risk has been accepted. Prefer signed packages and validated TLS certificates.
 
-In a Satellite-managed environment, **Content Views** control which repositories and package versions are available to hosts, and **Activation Keys** associate subscriptions, lifecycle environments, and content settings during host registration.
+In a Satellite-managed environment, **Content Views** control which repositories and package versions are available to hosts. **Activation Keys** associate subscriptions, lifecycle environments, and content settings during host registration.
 
-## STIG-Aligned GPG Keys and Custom Package Signing
+## GPG Keys and Custom RPM Package Signing
+
+RPM signing provides package-integrity and package-origin verification. A signing workflow uses a private key to sign RPMs and distributes the corresponding public key to Satellite and client systems.
 
 {: .warning}
 > **FIPS and STIG Key-Type Requirement**
 >
 > For systems operating under applicable FIPS and DISA STIG requirements, use an organizationally approved RSA signing key, such as RSA 4096-bit. Do not use Ed25519 (EdDSA) signing keys unless specifically authorized by the applicable security policy. Validate key-algorithm, key-length, protection, storage, and rotation requirements with the responsible security authority.
 
-RPM package signing helps ensure that package contents have not been altered. Use HTTPS when distributing or downloading signed RPMs to add transport protection.
+### Signing-Key Roles
+
+| Component | Purpose | Handling |
+|---|---|---|
+| Private key | Signs RPM packages. | Restrict access; store only on an approved signing host or approved protected backup location. |
+| Public key | Verifies signed RPM packages. | Upload to Satellite and distribute to clients as required. |
+| Signed RPM | RPM containing the signing-key signature. | Sign before publishing to a repository. |
+| Fingerprint | Unique identifier for the public/private key pair. | Verify through an independent authorized channel before production use. |
 
 ### Prerequisites
 
-Install the RPM signing utility and GnuPG on the signing system:
+Install GnuPG and the RPM signing utility on the approved signing system:
 
 ```bash
-dnf install rpm-sign gnupg2
+dnf install -y gnupg2 rpm-sign
+```
+
+If interactive GPG key creation or signing reports a pinentry error, install an appropriate pinentry package for the environment:
+
+```bash
+dnf install -y pinentry
 ```
 
 ### Generate a GPG Signing Key
 
-Generate a GPG key pair for the package-signing identity:
+Generate a key pair interactively:
 
 ```bash
-# Generate an organization-approved GPG signing key.
-# For an RSA 4096-bit key, select:
-#   (1) RSA and RSA
-#   Key size: 4096
 gpg --full-generate-key
 ```
 
-List the secret signing keys and record the full fingerprint for the selected key:
+Recommended interactive selections should follow organizational policy. A common RSA signing-key configuration is:
+
+| Prompt | Example Value |
+|---|---|
+| Key type | `RSA and RSA` |
+| Key size | `4096` |
+| Expiration | Organization-approved expiration or rotation interval |
+| Real name | `<organization> RPM Repository Signing Key` |
+| Email | `<shared-signing-contact@example.invalid>` |
+| Comment | `<repository-or-environment>` |
+| Passphrase | Use an organization-approved protected-key process |
+
+{: .note}
+> Use a role-based or infrastructure-based identity rather than an individual's name. Ensure the signing identity, recovery process, and key custodianship remain valid when personnel change.
+
+List available secret keys and record the selected key fingerprint:
 
 ```bash
+# List secret keys using long key IDs
 gpg --list-secret-keys --keyid-format LONG
-gpg --fingerprint "admin@example.com"
+
+# Display the full fingerprint for a selected key
+gpg --fingerprint "<key-id-or-identity>"
 ```
 
 ### Export the Public Key
@@ -192,18 +226,20 @@ gpg --fingerprint "admin@example.com"
 Export the public key in ASCII-armored format:
 
 ```bash
-gpg --export --armor "admin@example.com" > RPM-GPG-KEY-custom
+# Export the selected public key
+gpg --export --armor "<key-id-or-identity>" \
+  > RPM-GPG-KEY-custom
+
+# Review the exported public key
+cat RPM-GPG-KEY-custom
 ```
 
-Import the public key into the local RPM database:
+Import the public key into the local RPM database when the signing host must verify packages signed by that key:
 
 ```bash
 rpm --import RPM-GPG-KEY-custom
-```
 
-List imported RPM public keys:
-
-```bash
+# List imported RPM public keys
 rpm -qa 'gpg-pubkey*'
 ```
 
@@ -212,134 +248,226 @@ rpm -qa 'gpg-pubkey*'
 Configure the signing identity in the signing user's `~/.rpmmacros` file:
 
 ```text
-%_gpg_name admin@example.com
+%_gpg_name <key-id-or-identity>
 ```
 
-Use the full key ID, fingerprint, user name, or email address that uniquely identifies the authorized signing key.
+For example:
+
+```bash
+# Add the signing-key identity to the current user's RPM macro file
+echo '%_gpg_name <key-id-or-identity>' >> ~/.rpmmacros
+
+# Confirm the configured macro
+grep '^%_gpg_name' ~/.rpmmacros
+```
+
+Use a key ID, fingerprint, full name, or email address that uniquely identifies the approved signing key.
 
 ### Sign and Verify Custom RPMs
 
-Sign the RPM before publishing it:
+Sign RPMs before uploading or publishing them:
 
 ```bash
-rpm --addsign /path/to/my-package-1.0-1.x86_64.rpm
+# Sign one RPM
+rpm --addsign /path/to/package-1.0-1.x86_64.rpm
+
+# Sign multiple RPMs in the current directory
+rpm --addsign ./*.rpm
+
+# Verify an RPM signature
+rpm --checksig /path/to/package-1.0-1.x86_64.rpm
 ```
 
-Verify the RPM signature:
+If the private key is passphrase-protected, enter the passphrase when prompted.
+
+{: .warning}
+> Re-signing changes an RPM's checksum. Sign packages before publishing them to Satellite or another repository. If an already-published RPM must be re-signed, treat it as updated content and follow the applicable repository-content change process.
+
+### Upload the Public Key to Satellite
+
+Create a GPG Content Credential in Satellite:
+
+```text
+Content → Content Credentials → Create Content Credential
+```
+
+Use the following values:
+
+| Field | Value |
+|---|---|
+| Name | `<custom-repository-gpg-key>` |
+| Type | `GPG Key` |
+| Content | Paste or upload the contents of `RPM-GPG-KEY-custom`. |
+
+Then associate the content credential with the applicable custom product or repository.
+
+```text
+Content → Products → <product> → Repositories → <repository>
+```
+
+Use the Satellite UI or approved automation to associate the GPG key with the repository and publish the updated Content View as required by the local content-management process.
+
+**Hammer CLI example:**
 
 ```bash
-rpm --checksig /path/to/my-package-1.0-1.x86_64.rpm
+hammer content-credentials create \
+  --content-type gpg_key \
+  --name "<custom-repository-gpg-key>" \
+  --organization "<organization>" \
+  --path RPM-GPG-KEY-custom
 ```
-
-If the private key is passphrase-protected, enter the passphrase when prompted during signing.
 
 ### Trust the Public Key on Hosts and Standalone Repositories
 
-**In Satellite:**
-
-1. Upload `RPM-GPG-KEY-custom` under **Content** → **Content Credentials**.
-2. Attach the content credential to the applicable Product or Repository.
-3. Ensure the published repository configuration references the appropriate public GPG key.
-
-**Directly on a host or standalone repository:**
+For hosts consuming content outside the normal Satellite registration workflow:
 
 ```bash
 # Install the public key in the standard RPM GPG-key directory
-install -m 0644 RPM-GPG-KEY-custom /etc/pki/rpm-gpg/RPM-GPG-KEY-custom
+install -m 0644 RPM-GPG-KEY-custom \
+  /etc/pki/rpm-gpg/RPM-GPG-KEY-custom
 
-# Import the custom public key into the RPM database
+# Import the key into the RPM database
 rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-custom
 
-# Import the Red Hat release key when required
-rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release
-
-# List imported keys or verify an RPM package
+# Verify imported RPM public keys
 rpm -qa 'gpg-pubkey*'
-rpm --checksig package.rpm
 
-# Create repository metadata for a standalone repository outside Satellite
+# Verify the signature on a package
+rpm --checksig package.rpm
+```
+
+For a standalone RPM repository, create or refresh repository metadata after placing signed RPMs in the repository directory:
+
+```bash
 createrepo_c /path/to/repo
 ```
 
-### GPG Key Management
+### Back Up a Private GPG Key
+
+{: .warning}
+> A private GPG key can sign packages as its associated identity. Export it only for an authorized backup, recovery, or controlled migration. Store and transfer it only through an approved protected method.
+
+```bash
+# Identify the key before export
+gpg --list-secret-keys --keyid-format LONG
+gpg --fingerprint "<key-id-or-identity>"
+
+# Export the private key in ASCII-armored format
+gpg --armor \
+  --output RPM-GPG-KEY-custom-private.asc \
+  --export-secret-keys "<key-id-or-identity>"
+
+# Export the public key
+gpg --armor \
+  --output RPM-GPG-KEY-custom.asc \
+  --export "<key-id-or-identity>"
+
+# Export owner trust when required for controlled migration
+gpg --export-ownertrust > ownertrust.txt
+
+# Restrict locally created export files
+chmod 0600 RPM-GPG-KEY-custom-private.asc
+chmod 0600 ownertrust.txt
+chmod 0644 RPM-GPG-KEY-custom.asc
+```
+
+Store the private-key export and any associated recovery material in an approved protected repository or vault. Retain the public key and the verified fingerprint with the key-recovery documentation.
+
+### Import an Existing Private Key
+
+Use this procedure only for authorized key recovery or controlled migration.
+
+```bash
+# Import the private key
+gpg --import RPM-GPG-KEY-custom-private.asc
+
+# Import the public key
+gpg --import RPM-GPG-KEY-custom.asc
+
+# Import owner trust when included in the approved backup
+gpg --import-ownertrust ownertrust.txt
+
+# Verify available secret keys and fingerprint
+gpg --list-secret-keys --keyid-format LONG
+gpg --fingerprint "<key-id-or-identity>"
+
+# Test package signing and verification
+rpm --addsign /path/to/package-1.0-1.x86_64.rpm
+rpm --checksig /path/to/package-1.0-1.x86_64.rpm
+```
+
+After completing an authorized migration, remove temporary private-key export files from the working directory according to the organization's approved media-handling and sanitization process.
+
+### Retire or Remove a GPG Key
+
+Before removing a signing key, ensure that:
+
+1. Replacement packages have been signed with the successor key, if applicable.
+2. The successor public key has been distributed to Satellite and affected clients.
+3. Repository associations and Content Views have been updated.
+4. The key-retirement action is authorized and documented.
+
+```bash
+# List secret keys and identify the fingerprint
+gpg --list-secret-keys --keyid-format LONG
+gpg --fingerprint "<key-id-or-identity>"
+
+# Delete the secret key first
+gpg --delete-secret-keys "<fingerprint>"
+
+# Delete the corresponding public key
+gpg --delete-keys "<fingerprint>"
+
+# Verify removal from the local GPG keyring
+gpg --list-keys
+gpg --list-secret-keys
+```
+
+Remove or disassociate the corresponding Content Credential in Satellite only after affected repositories and clients have transitioned to the replacement key or no longer require the retired key.
+
+### GPG Key Management Quick Reference
 
 | Task | Command |
 |---|---|
 | List secret signing keys | `gpg --list-secret-keys --keyid-format LONG` |
+| List public keys | `gpg --list-keys` |
 | Display a key fingerprint | `gpg --fingerprint "<key-id-or-identity>"` |
 | Export a public key | `gpg --export --armor "<identity>" > RPM-GPG-KEY-custom` |
+| Export a private key | `gpg --armor --export-secret-keys "<identity>" > RPM-GPG-KEY-custom-private.asc` |
+| Import a GPG key | `gpg --import <key-file>` |
 | Import a public key into RPM | `rpm --import RPM-GPG-KEY-custom` |
 | List imported RPM public keys | `rpm -qa 'gpg-pubkey*'` |
 | Sign an RPM | `rpm --addsign package.rpm` |
 | Verify an RPM signature | `rpm --checksig package.rpm` |
-
-## Exporting and Importing a Private GPG Key
-
-{: .warning}
-> A private GPG key can sign packages as its associated identity. Export it only when necessary for an authorized backup, recovery, or controlled key migration. Store and transfer the export only through an approved protected method.
-
-```bash
-# 1. Identify the key fingerprint and ID
-gpg --list-secret-keys --keyid-format LONG
-gpg --fingerprint "admin@example.com"
-
-# 2. Export private key, public key, and owner trust with restrictive permissions
-gpg --armor --output RPM-GPG-KEY-custom-private.asc --export-secret-keys "admin@example.com"
-chown root:root RPM-GPG-KEY-custom-private.asc
-chmod 0600 RPM-GPG-KEY-custom-private.asc
-
-gpg --armor --output RPM-GPG-KEY-custom.asc --export "admin@example.com"
-gpg --export-ownertrust > ownertrust.txt
-chmod 0600 ownertrust.txt
-```
-
-On the destination server, after transferring through an approved protected mechanism:
-
-```bash
-# Import keys and owner trust
-gpg --import RPM-GPG-KEY-custom-private.asc
-gpg --import RPM-GPG-KEY-custom.asc
-gpg --import-ownertrust ownertrust.txt
-
-# Verify fingerprint and test signing
-gpg --list-secret-keys --keyid-format LONG
-gpg --fingerprint "admin@example.com"
-rpm --addsign /path/to/my-package-1.0-1.x86_64.rpm
-rpm --checksig /path/to/my-package-1.0-1.x86_64.rpm
-
-# Securely remove temporary export files
-rm -f RPM-GPG-KEY-custom-private.asc ownertrust.txt
-```
-
-{: .note}
-> The GPG passphrase remains necessary to use a protected private key after import. Verify the key fingerprint through an independent authorized channel before using it to sign production RPMs.
+| Remove default GPG configuration from RPM macros | Remove the `%_gpg_name` line from `~/.rpmmacros` |
 
 ## Package Management with `dnf`
 
 ```bash
-# Install a single package (prompts for confirmation)
-dnf install <pkg>
+# Install a single package
+dnf install <package>
 
-# Install multiple packages at once
-dnf install pkg1 pkg2 pkg3
+# Install multiple packages
+dnf install package1 package2 package3
 
 # Install without prompting for confirmation
-dnf install -y <pkg>
+dnf install -y <package>
 
-# Remove a package and its unused dependencies
-dnf remove <pkg>
+# Remove a package and dependencies no longer required
+dnf remove <package>
 
-# Remove orphaned dependency packages no longer needed by any installed package
+# Remove orphaned dependency packages
 dnf autoremove
 
-# Check for available updates without installing them (exits 100 if updates exist)
+# Check for available updates without installing them
+# Exit status 100 indicates updates are available
 dnf check-update
 
 # Update all installed packages
 dnf update
 
 # Update a specific package
-dnf update <pkg>
+dnf update <package>
 
 # Clear all cached packages and repository metadata
 dnf clean all
@@ -357,21 +485,21 @@ dnf makecache
 # Search package names and summaries
 dnf search <keyword>
 
-# Search package names, summaries, and full descriptions
+# Search package names, summaries, and descriptions
 dnf search all <keyword>
 
-# Display detailed package metadata (version, repo, size, description)
-dnf info <pkg>
+# Display detailed package metadata
+dnf info <package>
 
-# Find which package provides a file or command (for example, semanage)
-dnf provides */<filename>
+# Find which package provides a file or command
+dnf provides '*/<filename>'
 dnf provides /usr/sbin/semanage
 
-# List all packages (installed and available) or a specific package
+# List all packages or a specific package
 dnf list
 dnf list <package>
 
-# List only installed, available, or updatable packages
+# List installed, available, or updatable packages
 dnf list installed
 dnf list available
 dnf list updates
@@ -380,11 +508,13 @@ dnf list updates
 dnf list available <pattern>
 dnf list installed <pattern>
 
-# Quickly search locally installed RPMs or list files installed by a package
+# Search locally installed RPMs
 rpm -qa | grep <pattern>
-rpm -ql <pkg>
 
-# Query repository metadata without installing (files, dependencies, or repository contents)
+# List files installed by a package
+rpm -ql <package>
+
+# Query repository metadata without installing
 dnf repoquery -l <package-name>
 dnf repoquery --requires <package-name>
 dnf repoquery --repo=<repo-name>
@@ -392,12 +522,19 @@ dnf repoquery --repo=<repo-name>
 
 ## Package Groups
 
-Package groups are collections of related packages for a common function, such as **Development Tools**, **Web Server**, or **System Tools**.
+Package groups are collections of related packages for a common function, such as development tools, web servers, or system administration tools.
 
 ```bash
+# List package groups
 dnf group list
+
+# List visible and hidden package groups
 dnf group list hidden
+
+# Display group details
 dnf group info "Group Name"
+
+# Install a package group
 dnf group install "Group Name"
 ```
 
@@ -423,19 +560,18 @@ dnf module install <module>:<stream>/<profile>
 dnf module reset <module-name>
 
 # Switch an existing PHP installation to stream 8.2
-# ([d] = default, [e] = enabled, [i] = installed)
 dnf module list php
 dnf module reset php
 dnf module enable php:8.2
 dnf distro-sync
 
-# Or install a stream directly if not yet installed
+# Install a stream directly if it is not already installed
 dnf install @php:8.2
 ```
 
 ## RPM Commands
 
-Use `dnf` for dependency-aware installation and updates. Use `rpm` primarily for local RPM inspection and integrity verification.
+Use `dnf` for dependency-aware installation and updates. Use `rpm` primarily for local RPM inspection, package verification, and signature validation.
 
 ```bash
 # Query an uninstalled RPM file
@@ -455,27 +591,41 @@ rpm --checksig package.rpm
 ## Transaction History
 
 ```bash
+# List dnf transaction history
 dnf history
+
+# Display information about a transaction
 dnf history info <id>
+
+# Attempt to undo a transaction
 dnf history undo <id>
+
+# Repeat a transaction
 dnf history redo <id>
 ```
+
+{: .warning}
+> Review the transaction details and dependency changes before using `dnf history undo`. Some transactions cannot be fully reversed if later package changes depend on them.
 
 ## Satellite Server Package Management and Updates
 
 {: .important}
-> Satellite servers lock base OS packages through `foreman-protector` to protect Satellite dependencies. Do not run direct `dnf update` or `dnf install` on a Satellite server. Use `satellite-maintain` instead.
+> Satellite servers protect base operating system packages through `foreman-protector` to preserve Satellite dependencies. Do not run direct `dnf update` or `dnf install` on a Satellite server unless following an approved maintenance procedure. Use `satellite-maintain` for Satellite package maintenance.
 
 ```bash
-# Run Satellite health checks and update Satellite packages
+# Run Satellite health checks
 satellite-maintain health check
+
+# Update Satellite packages
 satellite-maintain packages update
 
-# Install third-party or custom packages, such as an antivirus agent from a custom repository
+# Install an approved third-party or custom package
 satellite-maintain packages install <package-name>
 
-# Only if manual dnf/yum intervention is required:
-# unlock, run the approved dnf/yum action, then immediately re-lock
+# Only if manual dnf/yum intervention is specifically required:
+# unlock, perform the approved action, then immediately re-lock
 satellite-maintain packages unlock
 satellite-maintain packages lock
 ```
+
+Satellite supports importing a custom public GPG key as a Content Credential and associating it with custom content; RHEL documents `rpm-sign`/`rpm --addsign`, public-key export, and `%_gpg_name` configuration for package signing. 
