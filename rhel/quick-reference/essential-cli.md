@@ -62,11 +62,13 @@ nav_order: 1
 
 | Task | Command |
 |---|---|
-| Redirect output to a file; overwrite existing content | `ls > output.txt` |
-| Append output to a file | `ls >> output.txt` |
-| Redirect errors to the null device | `ls ilwehgi 2> /dev/null` |
-| Redirect both output and errors to a file | `ls whuhiu > errout 2>&1` |
+| Redirect standard output to a file; overwrite existing content | `ls > output.txt` |
+| Append standard output to a file | `ls >> output.txt` |
+| Redirect standard error to the null device | `ls ilwehgi 2> /dev/null` |
+| Redirect both standard output and standard error to a file | `ls whuhiu &> errout` |
 | Redirect errors to the null device and output to a file | `ls ilwehgi Documents > output 2> /dev/null` |
+| Redirect both output and errors to a file (Bash/Zsh shorthand) | `ls whuhiu &> errout` |
+| Append both output and errors to a file (Bash/Zsh shorthand) | `ls whuhiu &>> errout` |
 
 ## Pipes
 
@@ -86,25 +88,83 @@ nav_order: 1
 | Print a specific exported variable | `printenv PATH` |
 | Print a shell variable through shell expansion | `echo "$PATH"` |
 
-> `printenv` displays exported environment variables. Use `echo "$VARIABLE"` when you specifically want to view the value as expanded by the current shell.
+> `printenv` displays exported environment variables. Use `echo "$VARIABLE"` when you specifically want to view a value as expanded by the current shell.
 
-### Setting a Global Environment Variable
+### Setting Global Environment Variables and `PATH`
 
-Create a `.sh` drop-in file under `/etc/profile.d/` instead of editing `/etc/profile` directly, so operating system updates do not overwrite local configuration.
+Create a `.sh` drop-in file under `/etc/profile.d/` rather than editing `/etc/profile` directly. This keeps local configuration separate from operating system-managed files.
 
-| Task | Value or file content |
+`PATH` is an environment variable containing a colon-separated list of directories that the shell searches when you enter a command without its full path.
+
+For example, if the Trellix Agent executable is located at `/opt/McAfee/agent/bin/cmdagent`, adding `/opt/McAfee/agent/bin` to `PATH` allows you to run:
+
+```bash
+cmdagent
+```
+
+instead of:
+
+```bash
+/opt/McAfee/agent/bin/cmdagent
+```
+
+| Task | Command or file content |
 |---|---|
 | Create the configuration file | `/etc/profile.d/custom_env.sh` |
-| Add this line to the file | `export MY_GLOBAL_VAR="value"` |
-| Recommended owner | `root:root` |
-| Recommended mode | `0644` |
+| Set a global environment variable | `export MY_GLOBAL_VAR="value"` |
+| Append a directory to `PATH` | `export PATH="$PATH:/opt/McAfee/agent/bin"` |
+| Prepend a directory to `PATH` | `export PATH="/opt/McAfee/agent/bin:$PATH"` |
+| View the current `PATH` | `echo "$PATH"` |
+| Confirm the command location | `command -v cmdagent` |
+| List all matching commands in `PATH` | `type -a cmdagent` |
+| Recommended file owner | `root:root` |
+| Recommended file mode | `0644` |
 
-On systems with a strict `umask`, confirm that the file remains readable by regular users.
+For example, `/etc/profile.d/custom_env.sh` may contain:
+
+```bash
+export MY_GLOBAL_VAR="value"
+export PATH="$PATH:/opt/McAfee/agent/bin"
+```
+
+Set the file owner and permissions after creating or modifying the file:
 
 ```bash
 chown root:root /etc/profile.d/custom_env.sh
 chmod 0644 /etc/profile.d/custom_env.sh
 ```
+
+The file must be readable by users whose login shells source `/etc/profile`. The `0644` mode allows `root` to modify the file while allowing other users to read it.
+
+Start a new login session to apply the change. To load the file in the current shell for testing, run:
+
+```bash
+source /etc/profile.d/custom_env.sh
+```
+
+Then verify that the expected executable is found:
+
+```bash
+command -v cmdagent
+```
+
+> **Recommended `PATH` order:** Append third-party application directories to `PATH` by default:
+>
+> ```bash
+> export PATH="$PATH:/opt/McAfee/agent/bin"
+> ```
+>
+> This preserves the precedence of standard RHEL system commands. If `cmdagent` does not exist in another `PATH` directory, appending or prepending the Trellix directory produces the same result.
+
+> **When to prepend:** Prepend a directory only when you intentionally need its executables to override commands in existing `PATH` locations:
+>
+> ```bash
+> export PATH="/opt/McAfee/agent/bin:$PATH"
+> ```
+>
+> Use `type -a cmdagent` before making that decision to identify any existing commands with the same name.
+
+> **Security:** Add only trusted, administrator-controlled directories to `PATH`. Do not add writable locations such as `/tmp`, a user's Downloads directory, or the current directory (`.`), particularly at the beginning of `PATH`.
 
 ### Shell Configuration Files
 
