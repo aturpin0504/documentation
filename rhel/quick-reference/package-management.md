@@ -6,80 +6,18 @@ grand_parent: RHEL
 nav_order: 7
 ---
 
-# Package and Satellite Management
+# Package Management
 
-Daily package management with `dnf` and `rpm`, module streams, custom repositories, GPG package signing, and Red Hat Satellite maintenance.
+Daily package management with `dnf` and `rpm`, module streams, repository configuration, Satellite-managed host registration, and custom RPM package signing.
 
 {: .note}
 > This guide uses `dnf` as the primary package-management command. On systems where `yum` is present, it is typically a compatibility link to `dnf`.
 
-## Satellite Server Registration and Required Repositories
+## Satellite-Managed Host Registration and Repositories
 
-If a Satellite server must be rebuilt, register it to Red Hat CDN and enable only the BaseOS, AppStream, Satellite, and Satellite Maintenance repositories matching the applicable RHEL major version (`<rhel_ver>`, for example, `9`) and Satellite version (`<sat_ver>`).
+This section applies to RHEL hosts managed by Red Hat Satellite. For Satellite server registration, repository prerequisites, manifests, maintenance, backups, updates, and upgrades, see the **Satellite Management** reference.
 
-```bash
-# Register the host to Red Hat
-subscription-manager register --username <rh_user> --auto-attach
-
-# Disable all repositories first to avoid conflicts
-subscription-manager repos --disable "*"
-
-# Verify exact repository IDs for the installed RHEL and Satellite versions
-subscription-manager repos --list | grep -E "baseos-rpms|appstream-rpms|satellite-"
-
-# Enable required RHEL and Satellite repositories
-subscription-manager repos \
-  --enable=rhel-<rhel_ver>-for-x86_64-baseos-rpms \
-  --enable=rhel-<rhel_ver>-for-x86_64-appstream-rpms \
-  --enable=satellite-<sat_ver>-for-rhel-<rhel_ver>-x86_64-rpms \
-  --enable=satellite-maintenance-<sat_ver>-for-rhel-<rhel_ver>-x86_64-rpms
-```
-
-If `satellite-maintain packages update` fails because of missing repositories or dependencies, verify that the required BaseOS, AppStream, Satellite, and Satellite Maintenance repositories are enabled.
-
-## Subscription Manifests
-
-A Subscription Manifest (`.zip`) carries Red Hat entitlements and CDN certificates from the Red Hat Hybrid Cloud Console into Satellite, allowing Satellite to synchronize Red Hat repositories.
-
-### Export a Manifest
-
-1. Go to <https://console.redhat.com/subscriptions/manifests>.
-2. Locate or create the manifest allocation for the correct Red Hat Satellite version.
-3. Select the **ellipsis** (`⋮`) next to the manifest allocation.
-4. Select **Export**.
-5. Download the generated `.zip` file and use it to import the manifest into Satellite.
-
-### Import a Manifest into Satellite
-
-**Web UI:**
-
-```text
-Content → Subscriptions → Manage Manifest → Upload
-```
-
-**Hammer CLI:**
-
-```bash
-# Import a manifest
-hammer subscription upload \
-  --file ~/manifest.zip \
-  --organization "<organization>"
-
-# Refresh after adding or renewing subscriptions
-hammer subscription refresh-manifest \
-  --organization "<organization>"
-```
-
-## Repository and Subscription Management
-
-### Satellite Server vs. Satellite-Managed Hosts
-
-| System Role | How Repositories Are Managed | Primary Tool |
-|---|---|---|
-| **Satellite Server** | Registered directly to Red Hat CDN, plus approved local custom `.repo` files under `/etc/yum.repos.d/` | `subscription-manager` and `satellite-maintain` |
-| **Satellite-Managed Host** | Controlled centrally through Content Views, Activation Keys, Lifecycle Environments, and Repository Sets | Satellite UI and `subscription-manager` |
-
-On Satellite-managed hosts, `subscription-manager` regenerates `/etc/yum.repos.d/redhat.repo`. Use `subscription-manager repos` for Red Hat or Satellite-managed repositories. Use `dnf config-manager` only for custom or third-party `.repo` files.
+On Satellite-managed hosts, `subscription-manager` manages Red Hat and Satellite-provided repository entitlement data. Satellite commonly controls available content through Content Views, Lifecycle Environments, and Activation Keys.
 
 ```bash
 # Register a host to Satellite using an organization and activation key
@@ -87,15 +25,19 @@ subscription-manager register \
   --org="<organization>" \
   --activationkey="<activation_key>"
 
-# Force an immediate refresh of repository entitlement data
+# Refresh entitlement and repository data
 subscription-manager refresh
 
-# Verify registration status and enabled repositories
+# Verify registration status
 subscription-manager status
+
+# List enabled repositories
 subscription-manager repos --list-enabled
+
+# List all repositories available to the host
 subscription-manager repos --list
 
-# Temporarily enable or disable a Satellite/RHSM repository on one host
+# Temporarily enable or disable an entitled repository on the host
 subscription-manager repos --enable=<repo-id>
 subscription-manager repos --disable=<repo-id>
 
@@ -104,30 +46,38 @@ dnf repolist
 dnf repolist --all
 dnf repoinfo <repo-id>
 
-# Enable or disable a custom, non-RHSM .repo definition
-dnf config-manager --enable <repo-id>
-dnf config-manager --disable <repo-id>
-
 # Unregister a host
 subscription-manager unregister
 ```
 
-## Custom Repositories
+{: .note}
+> `subscription-manager` regenerates `/etc/yum.repos.d/redhat.repo`. Do not manually edit that file. Manage Red Hat or Satellite-provided repositories with `subscription-manager`.
+
+### Custom Repository Files
+
+Use `dnf config-manager` only for approved custom, third-party, or locally managed `.repo` files.
 
 ```bash
 # Add a repository definition from a URL
 dnf config-manager --add-repo https://example.com/custom/custom.repo
 
-# Or create a repository file manually
+# Create or edit a custom repository file
 vi /etc/yum.repos.d/custom.repo
+
+# Enable or disable a custom repository
+dnf config-manager --enable <repo-id>
+dnf config-manager --disable <repo-id>
 
 # Modify a repository option persistently
 dnf config-manager --setopt=custom-apps.enabled=0 --save
 
-# Remove a repository definition and clear cached metadata
+# Remove a custom repository definition and clear cached metadata
 rm /etc/yum.repos.d/<name>.repo
 dnf clean all
 ```
+
+{: .note}
+> For Satellite-managed Red Hat repositories, do not manually create or edit `redhat.repo`. Use Satellite content management and `subscription-manager`. Use local `.repo` files only for approved custom or third-party repositories.
 
 ### Repository File Format
 
@@ -283,39 +233,28 @@ If the private key is passphrase-protected, enter the passphrase when prompted.
 {: .warning}
 > Re-signing changes an RPM's checksum. Sign packages before publishing them to Satellite or another repository. If an already-published RPM must be re-signed, treat it as updated content and follow the applicable repository-content change process.
 
-### Upload the Public Key to Satellite
+### Distribute the Public Key
 
-Create a GPG Content Credential in Satellite:
+The public key must be available to systems that validate packages signed by the corresponding private key.
 
-```text
-Content → Content Credentials → Create Content Credential
-```
-
-Use the following values:
-
-| Field | Value |
-|---|---|
-| Name | `<custom-repository-gpg-key>` |
-| Type | `GPG Key` |
-| Content | Paste or upload the contents of `RPM-GPG-KEY-custom`. |
-
-Then associate the content credential with the applicable custom product or repository.
-
-```text
-Content → Products → <product> → Repositories → <repository>
-```
-
-Use the Satellite UI or approved automation to associate the GPG key with the repository and publish the updated Content View as required by the local content-management process.
-
-**Hammer CLI example:**
+For standalone hosts or repositories:
 
 ```bash
-hammer content-credentials create \
-  --content-type gpg_key \
-  --name "<custom-repository-gpg-key>" \
-  --organization "<organization>" \
-  --path RPM-GPG-KEY-custom
+# Install the public key in the standard RPM GPG-key directory
+install -m 0644 RPM-GPG-KEY-custom \
+  /etc/pki/rpm-gpg/RPM-GPG-KEY-custom
+
+# Import the key into the local RPM database
+rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-custom
+
+# Verify imported RPM public keys
+rpm -qa 'gpg-pubkey*'
+
+# Verify an RPM signature
+rpm --checksig package.rpm
 ```
+
+For Satellite-managed repositories, upload the public key as a Content Credential and associate it with the applicable custom repository. See the **Satellite Management** reference for the Satellite Web UI and Hammer CLI procedures.
 
 ### Trust the Public Key on Hosts and Standalone Repositories
 
@@ -606,19 +545,3 @@ dnf history redo <id>
 
 {: .warning}
 > Review the transaction details and dependency changes before using `dnf history undo`. Some transactions cannot be fully reversed if later package changes depend on them.
-
-## Satellite Server Administration
-
-{: .important}
-> Satellite servers have additional lifecycle, dependency, backup, and maintenance requirements. Do not use direct `dnf update` or `dnf install` for routine Satellite maintenance unless following an approved procedure.
-
-Use the dedicated **Satellite Management** reference for:
-
-- Health checks and service status
-- Satellite and underlying operating system patch updates
-- Satellite version upgrades
-- Backup and recovery procedures
-- Approved package installation
-- Repository prerequisites for Satellite maintenance
-
-Satellite supports importing a custom public GPG key as a Content Credential and associating it with custom content; RHEL documents `rpm-sign`/`rpm --addsign`, public-key export, and `%_gpg_name` configuration for package signing. 

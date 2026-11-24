@@ -354,6 +354,40 @@ satellite-maintain packages lock
 {: .warning}
 > Do not run direct `dnf install`, `dnf update`, or `dnf upgrade` on a Satellite server for routine maintenance. Use `satellite-maintain packages` or the applicable `satellite-maintain update` workflow. Unlock package protection and use `dnf` only when an approved, version-specific procedure explicitly directs it.
 
+### Upload the Public Key to Satellite
+
+Create a GPG Content Credential in Satellite:
+
+```text
+Content → Content Credentials → Create Content Credential
+```
+
+Use the following values:
+
+| Field | Value |
+|---|---|
+| Name | `<custom-repository-gpg-key>` |
+| Type | `GPG Key` |
+| Content | Paste or upload the contents of `RPM-GPG-KEY-custom`. |
+
+Then associate the content credential with the applicable custom product or repository.
+
+```text
+Content → Products → <product> → Repositories → <repository>
+```
+
+Use the Satellite UI or approved automation to associate the GPG key with the repository and publish the updated Content View as required by the local content-management process.
+
+**Hammer CLI example:**
+
+```bash
+hammer content-credentials create \
+  --content-type gpg_key \
+  --name "<custom-repository-gpg-key>" \
+  --organization "<organization>" \
+  --path RPM-GPG-KEY-custom
+```
+
 ## Maintenance Quick Reference
 
 | Task | Command |
