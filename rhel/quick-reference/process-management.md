@@ -220,12 +220,19 @@ uptime
 # Show logged-in users, uptime, load average, and active processes
 w
 
+# When using su or working as root after switching users,
+# ignore the username when determining the current process
+w -u
+
 # Show the number of processing units available to the current environment
 nproc
 
 # Show detailed CPU architecture and topology information
 lscpu
 ```
+
+{: .note }
+> When using `su` to become `root` or another user, use `w -u`. The `-u` option ignores the username while `w` identifies each terminal's current process and CPU times, which can produce more useful results after a user switch.
 
 Load average represents the average number of processes in runnable (`R`) or uninterruptible (`D`) state over the previous 1, 5, and 15 minutes.
 
