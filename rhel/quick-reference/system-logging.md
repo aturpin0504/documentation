@@ -75,18 +75,22 @@ logger -p user.notice "Custom application status message"
 |---|---|
 | `-f` | Follow new messages in real time |
 | `-n <num>` | Show the last `<num>` lines |
-| `-p <priority>` | Filter by priority (e.g., `err`, `warning`, `crit`) |
+| `-p <priority>` | Filter by priority, such as `err`, `warning`, or `crit` |
 | `-u <unit>` | Show messages for a specific `systemd` unit |
 | `--since` / `--until` | Filter by relative or absolute time |
 | `-k` | Show kernel messages |
-| `-b` / `-b -1` | Show messages from current boot or previous boot |
+| `-b` / `-b -1` | Show messages from the current boot or previous boot |
+| `--disk-usage` | Show disk space used by persistent and runtime journals |
+| `--flush` | Move volatile journal entries to persistent storage when configured |
 
 ```bash
 # View the entire journal
 journalctl
 
-# Follow new messages in real time (all or for a specific service)
+# Follow new messages in real time
 journalctl -f
+
+# Follow new messages for a specific service
 journalctl -u sshd.service -f
 
 # Show the last 20 lines
@@ -109,39 +113,103 @@ journalctl --since yesterday
 journalctl --since today
 journalctl --since "2019-06-08 09:00:00"
 journalctl --since "09:00:00" --until "15:00:00"
+
+# Display journal disk usage
+journalctl --disk-usage
 ```
 
 ## Making `journald` Persistent
 
+Persistent journal storage saves logs under `/var/log/journal/` so they remain available after a reboot.
+
 {: .note }
-> STIG-hardened systems typically already enforce persistent journal storage by setting `Storage=persistent` in `/etc/systemd/journald.conf`. Verify before creating `/var/log/journal` manually.
+> Verify the local configuration and organizational logging baseline before making changes. Persistent storage may be configured through the default `Storage=auto` behavior, an explicit `Storage=persistent` setting, or an approved configuration-management process.
+
+### Verify Current Configuration
 
 ```bash
-# Verify whether journald is already configured for persistent storage
-grep -E '^Storage=' /etc/systemd/journald.conf
-ls -ld /var/log/journal
+# Check for an explicit Storage setting in the main configuration file
+grep -E '^[[:space:]]*Storage=' /etc/systemd/journald.conf
+
+# Check for Storage settings in configuration drop-in files
+grep -R -E '^[[:space:]]*Storage=' \
+  /etc/systemd/journald.conf.d/ 2>/dev/null
+
+# Check whether the persistent journal directory exists,
+# including ownership, permissions, and SELinux context
+ls -ldZ /var/log/journal
+
+# Display current journal disk use
+journalctl --disk-usage
 ```
 
-If not already configured, create persistent journal storage under `/var/log/journal`:
+### Enable Persistent Storage
+
+Prefer a configuration drop-in rather than editing the primary `/etc/systemd/journald.conf` file directly.
 
 ```bash
-# Create persistent journal directory
-mkdir /var/log/journal
+# Create the journald drop-in directory if needed
+mkdir -p /etc/systemd/journald.conf.d
 
-# Set ownership
-chown root:systemd-journal /var/log/journal
-
-# Set permissions and SGID bit
-chmod 2755 /var/log/journal
-
-# Signal journald to begin using persistent storage
-killall -USR1 systemd-journald
+# Configure persistent journal storage
+cat > /etc/systemd/journald.conf.d/60-persistent-storage.conf <<'EOF'
+[Journal]
+Storage=persistent
+EOF
 ```
+
+Create the persistent journal directory and apply the system-defined ownership and permissions:
+
+```bash
+# Create the persistent journal directory
+mkdir -p /var/log/journal
+
+# Apply the system-defined directory configuration
+systemd-tmpfiles --create --prefix /var/log/journal
+```
+
+### Verify Ownership, Permissions, and SELinux Context
+
+```bash
+# Display owner, group, numeric mode, and SELinux context
+ls -ldZ /var/log/journal
+
+# Display the SELinux context expected for this path
+matchpathcon /var/log/journal
+
+# Restore the policy-defined SELinux context recursively if needed
+restorecon -RFv /var/log/journal
+```
+
+{: .note }
+> Do not normally set ownership, mode, SGID, or SELinux labels manually for `/var/log/journal`. `systemd-tmpfiles` applies the system-defined directory configuration, and `restorecon` applies the SELinux context defined by the local policy.
+
+### Apply and Verify Persistent Logging
+
+```bash
+# Restart journald to apply configuration changes
+systemctl restart systemd-journald
+
+# Flush volatile journal data to persistent storage
+journalctl --flush
+
+# Verify persistent journal files exist
+find /var/log/journal -type f -name '*.journal' -ls
+
+# Display journal disk usage
+journalctl --disk-usage
+
+# View logs from the current boot
+journalctl -b
+```
+
+{: .warning }
+> Do not use `chcon` as the normal method for labeling `/var/log/journal`. Use `restorecon` so the directory receives the label defined by the installed SELinux policy. A manual `chcon` label can be lost during a filesystem relabel.
 
 ## Audit Log Commands
 
 ```bash
-# Search for SELinux denials (most recent, interpreted)
+# Search for SELinux denials
 ausearch -m AVC
 ausearch -m AVC -ts recent -i
 
