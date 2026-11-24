@@ -167,6 +167,8 @@ Use these expressions with `grep -E`.
 
 Use `sed` to search and replace text, delete lines, or print selected lines without opening an editor.
 
+Without `-i`, `sed` does not modify the source file. It writes the processed result to standard output, usually the terminal.
+
 | Task | Command |
 |---|---|
 | Print line 5 | `sed -n '5p' /etc/passwd` |
@@ -174,12 +176,55 @@ Use `sed` to search and replace text, delete lines, or print selected lines with
 | Print lines 10 through 20 | `sed -n '10,20p' /var/log/messages` |
 | Replace the first occurrence per line | `sed 's/old/new/' file` |
 | Replace all occurrences per line | `sed 's/old/new/g' file` |
+| Preview an in-place replacement without changing the file | `sed 's/old/new/g' file` |
+| Save edited output to a separate file | `sed 's/old/new/g' file > file-new` |
 | Edit a file in place | `sed -i 's/old/new/g' file` |
 | Edit in place and create a `.bak` backup | `sed -i.bak 's/old/new/g' file` |
 | Use an alternate delimiter for paths | `sed 's|/var/www/html|/srv/www|g' httpd.conf` |
 | Delete line 2 | `sed -i '2d' file` |
 | Delete lines 2 and 20 through 25 | `sed -i '2d;20,25d' file` |
 | Remove comments and blank lines from output | `sed -e '/^#/d' -e '/^$/d' file` |
+
+### Safer File-Editing Workflow
+
+For important files, preview the result before editing in place:
+
+```bash
+sed 's/old/new/g' file
+```
+
+To save the proposed change to a separate file for review:
+
+```bash
+sed 's/old/new/g' file > file-new
+```
+
+Compare the original and proposed versions:
+
+```bash
+diff -u file file-new
+```
+
+After reviewing the result, replace the original file:
+
+```bash
+mv file-new file
+```
+
+> **Warning:** Do not redirect `sed` output to the same file being read. The shell may truncate the file before `sed` can read it.
+>
+> ```bash
+> # Incorrect
+> sed 's/old/new/g' file > file
+> ```
+
+> **Recommendation:** For routine changes where a rollback copy is useful, use `-i.bak`:
+>
+> ```bash
+> sed -i.bak 's/old/new/g' file
+> ```
+>
+> This modifies `file` and retains the original content as `file.bak`.
 
 {: .tip }
 > **Preview before using `sed -i`**
