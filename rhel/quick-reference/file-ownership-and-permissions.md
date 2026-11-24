@@ -30,26 +30,32 @@ chown user.group file
 # Change only group owner
 chown :group file
 
+# Recursively change only group owner
+chown -R :group /dir
+
 # Recursively change user and group owner
 chown -R user:group /dir
 ```
 
 ### File Creation Defaults
 
-- **User owner:** The user who creates the file.
-- **Group owner:** The creating user's primary group.
+- **User owner:** Normally, the user or service account that creates the file.
+- **Group owner:** Normally, the creating process's effective or primary group.
+- **SGID directory exception:** If the parent directory has the SGID bit set, new files and subdirectories inherit the parent directory's group owner.
+- **User-owner inheritance:** Standard Linux permissions, SGID, and POSIX ACLs cannot force newly created files to have a different user owner. To make files owned by a specific user, run the creating process as that user or change ownership after creation.
 
 ## Permission Resolution Order
 
-Permission resolution stops at the first applicable match.
+The system applies the first applicable permission class. When ACLs are present, named user and group entries can affect the result.
 
 | Order | Check | Description |
 |---|---|---|
-| 1 | User owner | If you are the file owner, apply user permissions and stop. |
-| 2 | User ACL | If you have a user-assigned ACL, apply the ACL and stop. |
-| 3 | Group owner | If you belong to the file's group owner, apply group permissions and stop. |
-| 4 | Group ACL | If you match a group ACL, apply the ACL permissions and stop. |
-| 5 | Others | Apply the `others` permissions as the default fallback. |
+| 1 | User owner | If the process user is the file owner, apply the owner permissions. |
+| 2 | Named user ACL | If an ACL entry exists for the process user, apply that entry, subject to the ACL mask. |
+| 3 | Group class | If the process is a member of the owning group or any matching named-group ACLs, combine the matching group permissions and apply the ACL mask. |
+| 4 | Others | If no owner, named-user ACL, or matching group-class entry applies, use the `others` permissions. |
+
+> **ACL mask:** The ACL mask limits the effective permissions for named user ACLs, named group ACLs, and the owning group. It does not limit the file owner's permissions or the `others` permissions.
 
 ## Basic Permissions
 
@@ -145,14 +151,31 @@ ACLs provide more granular permissions than the standard user/group/other permis
 
 | Syntax | Meaning |
 |---|---|
-| `u:user:perms` | User ACL |
-| `g:group:perms` | Group ACL |
-| `o::perms` | Others ACL |
-| `d:` prefix | Default ACL for newly created content in a directory |
+| `u:user:perms` | Named user ACL entry |
+| `g:group:perms` | Named group ACL entry |
+| `u::perms` | File owner's ACL permissions |
+| `g::perms` | Owning group's ACL permissions |
+| `o::perms` | Others ACL permissions |
+| `m::perms` | ACL mask; limits effective permissions for the owning group and named user/group ACL entries |
+| `d:` prefix | Default ACL entry inherited by newly created content in a directory |
+
+> **Access ACLs** control access to an existing file or directory. **Default ACLs** can be applied only to directories and are inherited as access ACLs by newly created files and subdirectories.
 
 ```bash
-# Display ACLs
+# Display ACLs, including effective permissions
 getfacl file
+
+# Set the ACL mask explicitly
+setfacl -m m::rw- file
+
+# Set a default ACL for newly created files
+setfacl -m d:g:sales:rwx /dir
+
+# Set default owner, group, and others permissions for new content
+setfacl -d -m u::rwx,g::rwx,o::--- /dir
+
+# Remove all default ACL entries from a directory
+setfacl -k /dir
 
 # Grant a user rwx access
 setfacl -m u:username:rwx file
@@ -166,9 +189,6 @@ setfacl -m o::- file
 # Apply a group ACL recursively to existing files
 setfacl -R -m g:sales:rw /data
 
-# Set a default ACL for newly created files
-setfacl -m d:g:sales:rwx /dir
-
 # Remove a specific ACL entry
 setfacl -x u:username file
 
@@ -179,9 +199,32 @@ setfacl -b file
 {: .note }
 > `ls -l` displays a `+` after the normal permission bits when ACLs are present (for example, `-rwxrwx---+`). If needed, include the `acl` mount option in `/etc/fstab` for the relevant file system.
 
+### Default ACLs, SGID, and `umask`
+
+SGID, default ACLs, and `umask` control different parts of file creation:
+
+| Feature | Controls | Does Not Control |
+|---|---|---|
+| SGID on a directory | Group ownership of newly created files and subdirectories | User ownership or inherited permissions |
+| Default ACL on a directory | Inherited access permissions for newly created files and subdirectories | User ownership or group ownership |
+| `umask` | Permissions removed from new files and directories when no default ACL applies | Ownership or permissions on existing content |
+
+When a directory does not have a default ACL, the creating process's `umask` modifies the requested creation permissions.
+
+When a directory has a default ACL, new content inherits that ACL instead of applying `umask` in the normal manner. The creating program's requested mode can still restrict the final permissions. For example, ordinary files are normally created with a requested mode of `666`, so they do not automatically receive execute permission even if the directory's default ACL includes `x`.
+
+> **Recommendation:** Use SGID alone for a simple shared directory when all creators use a collaborative `umask`. Add a default ACL when you need consistent inherited permissions across users or services with different `umask` values.
+
 ## `umask`: Default Permissions
 
-`umask` removes permissions from the default creation mode (`666 - umask` for files, `777 - umask` for directories).
+`umask` removes permission bits from the default creation mode. For regular files, the starting mode is commonly `666`; for directories, it is commonly `777`.
+
+Conceptually:
+
+- Files: requested mode `666`, then permissions are restricted by `umask`.
+- Directories: requested mode `777`, then permissions are restricted by `umask`.
+
+> `umask` is a bit mask, not ordinary arithmetic subtraction. For example, a `umask` of `027` commonly results in file permissions of `640` and directory permissions of `750`. If the parent directory has a default ACL, that ACL is used instead of applying `umask` in the normal manner.
 
 | `umask` | Default File Permissions | Default Directory Permissions |
 |---:|---:|---:|
