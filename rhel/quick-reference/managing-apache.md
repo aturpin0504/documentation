@@ -94,6 +94,20 @@ When multiple virtual hosts are configured, a request without a matching `Server
 {: .note }
 > When wrapping virtual-host directives in `<IfModule>`, use either the module identifier from `httpd -M` without an extension (for example, `<IfModule ssl_module>`) or the `.c` source name (`<IfModule mod_ssl.c>`). Do not use `.so` (`mod_ssl.so` will not match).
 
+#### Web Content Ownership and SELinux Context
+
+- **Ownership (`root:root` vs. `apache:apache`)**: Although Apache runs as `apache:apache`, static content and application source code should normally be owned by `root:root` (`755` directories, `644` files) so a compromised web process cannot modify application code. Reserve `apache:apache` ownership (and `httpd_sys_rw_content_t`) for directories Apache or PHP must write to (such as `uploads/`, `cache/`, or `sessions/`).
+- **Default context under `/var/www/html/`**: `/var/www/html` and all subdirectories (for example, `/var/www/html/password` and `/var/www/html/phpipam`) are already mapped in RHEL's SELinux policy to `httpd_sys_content_t`, so `semanage fcontext` is not needed for paths under `/var/www/html/`.
+- **Copying vs. moving files (`-Z` and `restorecon`)**:
+  - `cp` creates new files at the destination and inherits `httpd_sys_content_t`. Plain `mv` (or `cp -a`) preserves the source context (such as `user_tmp_t` from `/tmp`).
+  - For single files, `cp -Z` and `mv -Z` set the destination to the SELinux policy default for that path.
+  - When moving a whole directory tree on the same filesystem, `mv -Z` only updates the top-level directory—not nested files—so run `restorecon` afterward:
+
+```bash
+# Restore policy-defined SELinux contexts recursively after deploying or moving files
+restorecon -RFv /var/www/html/password /var/www/html/phpipam
+```
+
 ### Directory Access Control Directives
 
 | Directive | Options | Purpose |
