@@ -82,10 +82,25 @@ chmod 755 /var/www/site1/uploads
 
 | Parameter | Description |
 |---|---|
-| `ServerName` | Primary hostname for the virtual host. |
+| `ServerName` | Primary hostname for the virtual host (typically the FQDN, such as `app.example.com`). |
+| `ServerAlias` | Additional hostnames matched to the same virtual host (space-separated, multiple lines, or wildcards like `*.example.com`). Commonly used for a short hostname alongside an FQDN (for example, `ServerAlias app`). For HTTPS, any alias must also be in the certificate's SAN. |
 | `DocumentRoot` | Location of web content for the virtual host. |
+| `Redirect` | Redirects requests to another URL (for example, `Redirect permanent / https://app.example.com/`). |
 | `ErrorLog` | Location of the error log. |
 | `CustomLog` | Location and format of the access log. |
+
+#### Using `Redirect` in Virtual Hosts
+
+`Redirect [status] URL-path URL` (from `mod_alias`) sends an HTTP redirect to the client and appends any remaining path segments automatically (for example, `/login` redirects to `https://app.example.com/login`):
+
+| Status Option | HTTP Code | Meaning |
+|---|---|---|
+| `permanent` | `301` | Permanent redirect (clients and browsers may cache it). |
+| `temp` (default) | `302` | Temporary redirect. |
+| `seeother` | `303` | Resource replaced; client should fetch the target with `GET`. |
+| `gone` | `410` | Resource permanently removed (no target URL is given). |
+
+When using `Redirect permanent / https://app.example.com/` inside `<VirtualHost *:80>` for multiple applications, give each `:80` block its own `ServerName` (and `ServerAlias` if needed) so each hostname redirects to its own HTTPS site.
 
 #### Default Virtual Host Behavior
 
