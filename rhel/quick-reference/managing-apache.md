@@ -83,11 +83,14 @@ chmod 755 /var/www/site1/uploads
 | Parameter | Description |
 |---|---|
 | `ServerName` | Primary hostname for the virtual host (typically the FQDN, such as `app.example.com`). |
-| `ServerAlias` | Additional hostnames matched to the same virtual host (space-separated, multiple lines, or wildcards like `*.example.com`). Commonly used for a short hostname alongside an FQDN (for example, `ServerAlias app`). For HTTPS, any alias must also be in the certificate's SAN. |
+| `ServerAlias` | Additional hostnames matched to the same virtual host (space-separated, multiple lines, or wildcards like `*.example.com`), such as a short hostname alongside an FQDN (`ServerAlias app`). |
 | `DocumentRoot` | Location of web content for the virtual host. |
 | `Redirect` | Redirects requests to another URL (for example, `Redirect permanent / https://app.example.com/`). |
 | `ErrorLog` | Location of the error log. |
 | `CustomLog` | Location and format of the access log. |
+
+{: .note }
+> For HTTPS virtual hosts, any `ServerAlias` must also be included in the certificate's Subject Alternative Name (SAN).
 
 #### Using `Redirect` in Virtual Hosts
 
@@ -109,19 +112,16 @@ When multiple virtual hosts are configured, a request without a matching `Server
 {: .note }
 > When wrapping virtual-host directives in `<IfModule>`, use either the module identifier from `httpd -M` without an extension (for example, `<IfModule ssl_module>`) or the `.c` source name (`<IfModule mod_ssl.c>`). Do not use `.so` (`mod_ssl.so` will not match).
 
-#### Web Content Ownership and SELinux Context
+#### Web Content Ownership and Permissions
 
-- **Ownership (`root:root` vs. `apache:apache`)**: Although Apache runs as `apache:apache`, static content and application source code should normally be owned by `root:root` (`755` directories, `644` files) so a compromised web process cannot modify application code. Reserve `apache:apache` ownership (and `httpd_sys_rw_content_t`) for directories Apache or PHP must write to (such as `uploads/`, `cache/`, or `sessions/`).
-- **Default context under `/var/www/html/`**: `/var/www/html` and all subdirectories (for example, `/var/www/html/password` and `/var/www/html/phpipam`) are already mapped in RHEL's SELinux policy to `httpd_sys_content_t`, so `semanage fcontext` is not needed for paths under `/var/www/html/`.
-- **Copying vs. moving files (`-Z` and `restorecon`)**:
-  - `cp` creates new files at the destination and inherits `httpd_sys_content_t`. Plain `mv` (or `cp -a`) preserves the source context (such as `user_tmp_t` from `/tmp`).
-  - For single files, `cp -Z` and `mv -Z` set the destination to the SELinux policy default for that path.
-  - When moving a whole directory tree on the same filesystem, `mv -Z` only updates the top-level directory—not nested files—so run `restorecon` afterward:
+Although Apache runs as `apache:apache`, keep static content and application source code owned by `root:root` so a compromised web process cannot modify application code:
 
-```bash
-# Restore policy-defined SELinux contexts recursively after deploying or moving files
-restorecon -RFv /var/www/html/password /var/www/html/phpipam
-```
+| Content Type | Ownership | Permissions | SELinux Type |
+|---|---|---|---|
+| Static content & application source code | `root:root` | `755` directories, `644` files | `httpd_sys_content_t` |
+| Writable directories (`uploads/`, `cache/`, `sessions/`) | `apache:apache` | `755` directories | `httpd_sys_rw_content_t` |
+
+See [SELinux and Firewall Configuration](#selinux-and-firewall-configuration) for context rules and file deployment (`cp`, `mv`, `restorecon`).
 
 ### Directory Access Control Directives
 
@@ -161,12 +161,29 @@ Prefixing with `+` or `-` adds or removes an option relative to parent directori
 
 ### SELinux Context for Apache
 
-Custom Apache content directories require an appropriate SELinux context, such as `httpd_sys_content_t`, for Apache to read the content:
+{: .note }
+> `/var/www/html` and all subdirectories (for example, `/var/www/html/password` and `/var/www/html/phpipam`) are already mapped in RHEL's SELinux policy to `httpd_sys_content_t`, so `semanage fcontext` is not needed for paths under `/var/www/html/`.
+
+Custom Apache content directories outside `/var/www/html` require an appropriate SELinux context—`httpd_sys_content_t` for read-only content, or `httpd_sys_rw_content_t` for directories Apache or PHP must write to (`uploads/`, `cache/`, `sessions/`):
 
 ```bash
 # Add persistent context rule and apply it
 semanage fcontext -a -t httpd_sys_content_t "/var/www/site1(/.*)?"
 restorecon -Rv /var/www/site1
+```
+
+#### Deploying Files (`cp`, `mv`, and `restorecon`)
+
+| Command | SELinux Context Behavior |
+|---|---|
+| `cp` | Creates new files at the destination and inherits `httpd_sys_content_t`. |
+| `mv` or `cp -a` | Preserves the source context (such as `user_tmp_t` from `/tmp`). |
+| `cp -Z` / `mv -Z` (single files) | Sets the destination file to the SELinux policy default for that path. |
+| `mv -Z` (directory tree, same filesystem) | Updates only the top-level directory—not nested files—so run `restorecon` afterward. |
+
+```bash
+# Restore policy-defined SELinux contexts recursively after deploying or moving files
+restorecon -RFv /var/www/html/password /var/www/html/phpipam
 ```
 
 ### Firewall Rules
@@ -203,12 +220,25 @@ firewall-cmd --list-services
 
 ### `_default_:443` vs. `*:443` and Virtual Host Inheritance
 
-- **`_default_:443` vs. `*:443`**: In Apache 2.4 (RHEL 8/9/10), `_default_:443` and `*:443` behave identically—both match any IP address on port 443. `_default_` is legacy Apache 1.3/2.2 syntax still used in `/etc/httpd/conf.d/ssl.conf`, while modern configs use `*:443`.
-- **Ordering gotcha on RHEL**: Because both match all IPs on `:443`, Apache treats them as competing virtual hosts. Since `ssl.conf` loads alphabetically before `vhost.conf`, `_default_:443` becomes the default fallback for bare IP requests or unmatched hostnames unless you disable it or name your file earlier (for example, `00-vhosts.conf`). Check load order with `httpd -S`.
-- **No inheritance between `<VirtualHost>` blocks**: Nothing inside `<VirtualHost _default_:443>` is inherited by other `<VirtualHost *:443>` blocks. Virtual hosts only inherit **global** directives defined outside any `<VirtualHost>` block (such as `Listen 443 https`, `SSLPassPhraseDialog`, `SSLSessionCache`, `SSLCryptoDevice`, and `SSLVHostSNIPolicy` at the top of `ssl.conf`).
-- **What to include in every `<VirtualHost *:443>`**:
-  - Always include `SSLEngine on`, `SSLCertificateFile`, and `SSLCertificateKeyFile`.
-  - In RHEL's `ssl.conf`, `SSLCipherSuite PROFILE=SYSTEM` (and commented `SSLProtocol` / `SSLHonorCipherOrder`) are inside `_default_:443`, not global. If omitted from your custom `<VirtualHost *:443>`, Apache falls back to `mod_ssl`/OpenSSL defaults (which on RHEL 9 still obey `/etc/crypto-policies/back-ends/opensslcnf.config`). As a best practice, explicitly set `SSLCipherSuite PROFILE=SYSTEM` (and `SSLProtocol -all +TLSv1.2 +TLSv1.3` if desired) in each `<VirtualHost *:443>` or define them once globally.
+#### `_default_:443` vs. `*:443` and Load Order
+
+In Apache 2.4 (RHEL 8/9/10), `_default_:443` and `*:443` behave identically—both match any IP address on port 443. `_default_` is legacy Apache 1.3/2.2 syntax still used in `/etc/httpd/conf.d/ssl.conf`, while modern configs use `*:443`.
+
+Because both match all IPs on `:443`, Apache treats them as competing virtual hosts. Since `ssl.conf` loads alphabetically before `vhost.conf`, `_default_:443` becomes the default fallback for bare IP requests or unmatched hostnames unless you disable it or name your file earlier (for example, `00-vhosts.conf`). Check load order with `httpd -S`.
+
+#### Directive Inheritance
+
+Nothing inside `<VirtualHost _default_:443>` is inherited by other `<VirtualHost *:443>` blocks. Virtual hosts only inherit **global** directives defined outside any `<VirtualHost>` block—such as `Listen 443 https`, `SSLPassPhraseDialog`, `SSLSessionCache`, `SSLCryptoDevice`, and `SSLVHostSNIPolicy` at the top of `ssl.conf`.
+
+#### Per-VirtualHost Checklist
+
+| Priority | Directives | Notes |
+|---|---|---|
+| **Required** | `SSLEngine on`, `SSLCertificateFile`, `SSLCertificateKeyFile` | Must be present in every `<VirtualHost *:443>`. |
+| **Recommended** | `SSLCipherSuite PROFILE=SYSTEM`, `SSLProtocol -all +TLSv1.2 +TLSv1.3` | Set explicitly in each `<VirtualHost *:443>` or define once globally. |
+
+{: .note }
+> In RHEL's `ssl.conf`, `SSLCipherSuite PROFILE=SYSTEM` (and commented `SSLProtocol` / `SSLHonorCipherOrder`) are inside `_default_:443`, not global. If omitted from your custom `<VirtualHost *:443>`, Apache falls back to `mod_ssl`/OpenSSL defaults (which on RHEL 9 still obey `/etc/crypto-policies/back-ends/opensslcnf.config`).
 
 ### Certificate Chains and Extracting from `.pfx`
 
