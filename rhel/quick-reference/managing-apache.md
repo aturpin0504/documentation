@@ -190,15 +190,52 @@ firewall-cmd --list-services
 
 | Parameter | Example Setting | Purpose |
 |---|---|---|
-| `SSLEngine` | `on` | Enable TLS for the virtual host. |
+| `SSLEngine` | `on` | Enable TLS for the virtual host. Must be set in each `<VirtualHost *:443>`. |
 | `SSLProtocol` | `-all +TLSv1.2 +TLSv1.3` | Restrict allowed TLS versions. |
 | `SSLCipherSuite` | `PROFILE=SYSTEM` | Inherit the active RHEL system-wide cryptographic policy (`DEFAULT`, `FIPS`, etc.). |
-| `SSLCertificateFile` | `/etc/pki/tls/certs/server.crt` | Server certificate location. |
+| `SSLCertificateFile` | `/etc/pki/tls/certs/server.crt` | Server (leaf) certificate, optionally followed by intermediate CA certificate(s) in the same PEM file (recommended in Apache 2.4.8+). |
 | `SSLCertificateKeyFile` | `/etc/pki/tls/private/server.key` | Server private-key location (`chmod 600`, `root:root`). |
-| `SSLCACertificateFile` | `/etc/pki/tls/certs/ca-bundle.crt` | CA chain certificate location. |
+| `SSLCertificateChainFile` | `/etc/pki/tls/certs/chain.crt` | *(Deprecated in Apache 2.4.8+)* Intermediate CA chain if not appended to `SSLCertificateFile`. |
+| `SSLCACertificateFile` | `/etc/pki/tls/certs/client-ca.crt` | CA certificate(s) used to verify **client** certificates in mutual TLS (does not send the server's intermediate chain). |
 
 {: .important }
 > Do not assume that a fixed cipher-suite string is valid for every RHEL release, FIPS configuration, or organizational baseline. Using `SSLCipherSuite PROFILE=SYSTEM` keeps Apache aligned with the active RHEL system-wide cryptographic policy.
+
+### `_default_:443` vs. `*:443` and Virtual Host Inheritance
+
+- **`_default_:443` vs. `*:443`**: In Apache 2.4 (RHEL 8/9/10), `_default_:443` and `*:443` behave identically—both match any IP address on port 443. `_default_` is legacy Apache 1.3/2.2 syntax still used in `/etc/httpd/conf.d/ssl.conf`, while modern configs use `*:443`.
+- **Ordering gotcha on RHEL**: Because both match all IPs on `:443`, Apache treats them as competing virtual hosts. Since `ssl.conf` loads alphabetically before `vhost.conf`, `_default_:443` becomes the default fallback for bare IP requests or unmatched hostnames unless you disable it or name your file earlier (for example, `00-vhosts.conf`). Check load order with `httpd -S`.
+- **No inheritance between `<VirtualHost>` blocks**: Nothing inside `<VirtualHost _default_:443>` is inherited by other `<VirtualHost *:443>` blocks. Virtual hosts only inherit **global** directives defined outside any `<VirtualHost>` block (such as `Listen 443 https`, `SSLPassPhraseDialog`, `SSLSessionCache`, `SSLCryptoDevice`, and `SSLVHostSNIPolicy` at the top of `ssl.conf`).
+- **What to include in every `<VirtualHost *:443>`**:
+  - Always include `SSLEngine on`, `SSLCertificateFile`, and `SSLCertificateKeyFile`.
+  - In RHEL's `ssl.conf`, `SSLCipherSuite PROFILE=SYSTEM` (and commented `SSLProtocol` / `SSLHonorCipherOrder`) are inside `_default_:443`, not global. If omitted from your custom `<VirtualHost *:443>`, Apache falls back to `mod_ssl`/OpenSSL defaults (which on RHEL 9 still obey `/etc/crypto-policies/back-ends/opensslcnf.config`). As a best practice, explicitly set `SSLCipherSuite PROFILE=SYSTEM` (and `SSLProtocol -all +TLSv1.2 +TLSv1.3` if desired) in each `<VirtualHost *:443>` or define them once globally.
+
+### Certificate Chains and Extracting from `.pfx`
+
+`SSLCertificateChainFile` is deprecated in Apache 2.4.8+ and is not needed if `SSLCertificateFile` contains your **leaf certificate first**, followed by the **intermediate CA certificate(s)**.
+
+When exporting a `.pfx` from an internal intermediate CA, verify whether the CA chain was included and extract the files in the order Apache expects:
+
+```bash
+# 1. Inspect the .pfx to see if both leaf and intermediate CA certs are present
+openssl pkcs12 -in yourfile.pfx -info -noout
+
+# 2. Extract the private key (unencrypted so httpd can restart unattended)
+openssl pkcs12 -in yourfile.pfx -nocerts -nodes -out /etc/pki/tls/private/server.key
+chmod 600 /etc/pki/tls/private/server.key
+
+# 3. Extract the server (leaf) certificate and CA chain separately
+openssl pkcs12 -in yourfile.pfx -clcerts -nokeys -out /tmp/leaf.crt
+openssl pkcs12 -in yourfile.pfx -cacerts -nokeys -out /tmp/ca-chain.crt
+
+# 4. Combine leaf + intermediate chain into SSLCertificateFile
+# (If /tmp/ca-chain.crt is empty, append your intermediate CA .crt/.pem after /tmp/leaf.crt)
+cat /tmp/leaf.crt /tmp/ca-chain.crt > /etc/pki/tls/certs/server.crt
+chmod 644 /etc/pki/tls/certs/server.crt
+
+# 5. Verify Apache sends the full chain after restarting httpd
+openssl s_client -connect your-vhost:443 -servername your-vhost -showcerts
+```
 
 ### HTTPS Virtual Host Example
 
@@ -206,7 +243,7 @@ firewall-cmd --list-services
 > Name-based virtual hosts can support TLS through Server Name Indication (SNI). Use IP-based virtual hosts only when required by the applicable architecture, client compatibility requirements, or organizational baseline.
 
 ```apache
-<VirtualHost 192.168.1.10:443>
+<VirtualHost *:443>
     ServerName secure.example.com
     DocumentRoot /var/www/secure
 
@@ -214,7 +251,7 @@ firewall-cmd --list-services
     <Directory /var/www/secure>
         Require all granted
         AllowOverride None
-        Options FollowSymLinks -Indexes
+        Options +FollowSymLinks -Indexes
     </Directory>
 
     # TLS configuration
@@ -222,10 +259,9 @@ firewall-cmd --list-services
     SSLProtocol -all +TLSv1.2 +TLSv1.3
     SSLCipherSuite PROFILE=SYSTEM
 
-    # Certificate files
+    # Certificate files (server.crt contains leaf + intermediate CA chain)
     SSLCertificateFile /etc/pki/tls/certs/secure.crt
     SSLCertificateKeyFile /etc/pki/tls/private/secure.key
-    SSLCACertificateFile /etc/pki/tls/certs/ca-bundle.crt
 
     # Logs
     ErrorLog logs/secure-error_log
