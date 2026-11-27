@@ -122,9 +122,23 @@ Recommended security-oriented settings:
 <Directory /var/www/secure>
     Require all granted
     AllowOverride None
-    Options FollowSymLinks -Indexes
+    Options +FollowSymLinks -Indexes
 </Directory>
 ```
+
+#### Common `Options` Values
+
+Prefixing with `+` or `-` adds or removes an option relative to parent directories; omitting prefixes replaces all inherited options. Avoid mixing prefixed and unprefixed options on the same `Options` line.
+
+| Option | Behavior | Admin Note |
+|---|---|---|
+| `Indexes` | Displays a browsable file listing if no `DirectoryIndex` (`index.html`, `index.php`) exists. | Use `-Indexes` in production to prevent directory enumeration. |
+| `FollowSymLinks` | Allows Apache to follow symbolic links (`ln -s`). | Required for `mod_rewrite` in `<Directory>` or `.htaccess`. |
+| `SymLinksIfOwnerMatch` | Follows symlinks only if the symlink and target share the same owner. | Safer alternative to `FollowSymLinks` with minor `lstat()` overhead. |
+| `ExecCGI` | Allows executing CGI scripts in the directory. | Keep disabled unless CGI is required. |
+| `Includes` / `IncludesNOEXEC` | Enables Server Side Includes (SSI). | `IncludesNOEXEC` disables `#exec` commands. |
+| `MultiViews` | Enables content negotiation by filename (for example, `/page` matching `page.html`). | Usually omitted to avoid unexpected URL matching. |
+| `None` / `All` | Disables all options, or enables all except `MultiViews`. | Use `Options None` for static-only directories when possible. |
 
 ---
 
