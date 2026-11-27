@@ -10,18 +10,21 @@ nav_order: 19
 
 ## Overview
 
-`fapolicyd` is an application allow-listing framework that controls application execution based on trust and administrator-defined policy.
+`fapolicyd` is an application allow-listing framework that controls application execution and file access based on trust and administrator-defined policy.
 
-Administrators can define allow, deny, and audit rules based on attributes such as:
+At runtime, `fapolicyd` consumes kernel `fanotify` events: when a process attempts to open or execute a file, the kernel pauses the operation and queries `fapolicyd`, which evaluates the request against its trust database (`RPMDB` and `File` backends) and compiled ruleset before returning an allow or deny decision.
 
-- File path
+Administrators can define allow, deny, syslog, and audit rules based on attributes such as:
+
+- File path or directory
 - SHA-256 hash
 - MIME type
 - Executable path
+- Execution pattern (such as dynamic linker invocation)
 - User or group identity
 - Trust status
 
-Applications installed through DNF and registered in the RPM database are normally trusted. The `fapolicyd` RPM plugin monitors DNF and RPM package transactions and notifies `fapolicyd` when RPM database content changes.
+Applications installed through DNF and registered in the RPM database are normally trusted. Installing `fapolicyd` also installs `rpm-plugin-fapolicyd` (which monitors DNF/RPM transactions and notifies `fapolicyd` when RPM database content changes) and `fapolicyd-selinux`.
 
 {: .note }
 > This guide uses the `rules.d/`, `trust.d/`, `fagenrules`, and modern `fapolicyd-cli` workflow available in RHEL 8.6 and later. For earlier RHEL 8 releases, review the installed `fapolicyd` documentation and configuration layout before applying these procedures.
@@ -33,7 +36,7 @@ Applications installed through DNF and registered in the RPM database are normal
 
 | File or Directory | Purpose |
 |---|---|
-| `/etc/fapolicyd/fapolicyd.conf` | Main daemon configuration file. Contains options for permissive mode, integrity checking, performance, and watched filesystems. |
+| `/etc/fapolicyd/fapolicyd.conf` | Main daemon configuration file. Contains options for permissive mode, integrity checking, `syslog_format`, performance, and watched filesystems. |
 | `/etc/fapolicyd/fapolicyd.trust` | Default list of trusted files outside RPM management. |
 | `/etc/fapolicyd/trust.d/` | Additional named trusted-file lists. |
 | `/etc/fapolicyd/rules.d/` | Component files containing allow, deny, and audit rules. |
@@ -43,7 +46,7 @@ Applications installed through DNF and registered in the RPM database are normal
 ## Rule Order
 
 {: .important }
-> Rule files in `/etc/fapolicyd/rules.d/` are processed in numerical filename order. Rules are evaluated in order, so an allow rule must appear before the deny rule it is intended to override.
+> Rule files in `/etc/fapolicyd/rules.d/` are processed in numerical filename order. Evaluation uses a **first-match-wins** model, so an allow rule must appear before the deny rule it is intended to override.
 
 Typical default rule-file ordering includes:
 
@@ -282,16 +285,18 @@ fapolicyd-cli --update
 
 ### Remove a Trust Entry
 
-Remove the applicable entry from the trust file, then restart the service.
+Remove the applicable entry with `fapolicyd-cli` or by editing the trust file, then update the database (or restart the service).
 
 ```bash
-# Edit a named trust file
-vi /etc/fapolicyd/trust.d/myapp
+# Remove a file from a named trust file
+fapolicyd-cli --file delete /opt/myapp/bin/tool --trust-file myapp
+fapolicyd-cli --update
 
-# Or edit the default trust file
+# Or edit a named trust file / default trust file directly
+vi /etc/fapolicyd/trust.d/myapp
 vi /etc/fapolicyd/fapolicyd.trust
 
-# Restart after removing trust entries
+# Restart after manual edits
 systemctl restart fapolicyd
 ```
 
@@ -304,10 +309,10 @@ Use custom rules when a trust entry is too broad or does not provide the require
 
 ### Rule Structure
 
-Rules use this general format:
+Rules use Subject/Object notation (similar to SELinux) with a **first-match-wins** evaluation order:
 
 ```text
-decision permission source : target
+decision permission subject : object
 ```
 
 Example:
@@ -318,16 +323,37 @@ allow perm=execute exe=/usr/bin/bash trust=1 : path=/opt/myapp/bin/task.sh ftype
 
 | Element | Meaning |
 |---|---|
-| `allow` | Permit the requested action. |
-| `deny_audit` | Deny the action and create an audit event. |
-| `perm=execute` | Rule applies to execution attempts. |
+| `allow` / `allow_syslog` / `allow_audit` | Permit the action (optionally logging to syslog or audit). |
+| `deny` / `deny_syslog` / `deny_audit` | Deny the action (optionally logging to syslog or audit). |
+| `perm=execute` / `perm=open` / `perm=any` | Match execution attempts, file opens, or any access. |
+| `all` | Wildcard matching any subject or object. |
 | `exe=/usr/bin/bash` | The parent executable attempting the action. |
-| `trust=1` | The referenced source object must be trusted. |
+| `trust=1` / `trust=0` | Match trusted (`1`) or untrusted (`0`) files; valid on both subject and object sides. |
 | `path=` | Matches a specific file path. |
 | `dir=` | Matches a directory path. A trailing `/` applies recursively. |
-| `ftype=` | Matches a file MIME type. |
+| `ftype=` | Matches a file MIME type (check with `fapolicyd-cli --ftype <path>`). |
+| `pattern=` | Matches an execution pattern (`normal`, `static`, `ld_preload`, `ld_so`). |
 | `sha256hash=` | Matches a file with the specified SHA-256 hash. |
-| `trust=0` | Matches an object that is not trusted. |
+
+Before writing `ftype=` rules, verify the exact MIME type `fapolicyd` assigns to a file (which can differ from `file`):
+
+```bash
+fapolicyd-cli --ftype /opt/myapp/bin/task.sh
+```
+
+### Execution Patterns (`30-patterns.rules`)
+
+`fapolicyd` can match how a binary is invoked using `pattern=`:
+
+| Pattern | Meaning |
+|---|---|
+| `normal` | Normal execution of a dynamically linked binary. |
+| `static` | Execution of a statically linked binary. |
+| `ld_preload` | Execution with `LD_PRELOAD` set in the environment. |
+| `ld_so` | Direct execution of a binary via the dynamic linker (for example, `/usr/lib64/ld-linux-x86-64.so.2 /path/to/bin`). |
+
+{: .warning }
+> Keep `deny_audit perm=any pattern=ld_so : all` enabled in `/etc/fapolicyd/rules.d/30-patterns.rules`. Without it, an untrusted binary can be executed indirectly through `/usr/lib64/ld-linux-x86-64.so.2`, bypassing standard execution checks. (If container runtimes such as `runc` require `ld_so`, scope an allow rule specifically to `exe=/usr/bin/runc`.)
 
 ### File-Specific Allow Rule
 
@@ -452,9 +478,9 @@ rule=<number>
 | `trust=` | Was the target considered trusted? |
 | `rule=` | Which compiled rule produced the decision? |
 
-### Debug-Deny Mode
+### Debug Modes (`--debug-deny` and `--debug`)
 
-Use debug mode only when normal audit records do not provide enough detail.
+Use standalone debug mode only when normal audit records do not provide enough detail. Use `--debug-deny` to record only denied events, or `--debug` to record both allow and deny events.
 
 ```bash
 # Stop the normal service before running standalone debug mode
@@ -477,9 +503,13 @@ pkill -f 'fapolicyd --debug-deny'
 systemctl start fapolicyd
 ```
 
+### Fapolicyd Analyzer (GUI)
+
+For graphical environments, `fapolicy-analyzer` provides a GUI to inspect the System Trust Database and Ancillary Trust Database, manage trust entries, and analyze audit/syslog events.
+
 ## Integrity Checking
 
-By default, `fapolicyd` does not perform additional file-integrity verification.
+By default (`integrity = none`), `fapolicyd` does not verify file contents. Without integrity checking, altering or replacing an already-trusted binary on disk (for example, overwriting an RPM-managed executable) will not be detected.
 
 Available integrity methods include:
 
@@ -521,6 +551,21 @@ rpm -i <application>.rpm
 
 # Refresh fapolicyd trust data
 fapolicyd-cli --update
+```
+
+## Automating with RHEL System Roles
+
+In multi-node environments, `fapolicyd` can be deployed and configured using the `redhat.rhel_system_roles.fapolicyd` Ansible role:
+
+```yaml
+- name: Configure fapolicyd
+  hosts: all
+  roles:
+    - role: redhat.rhel_system_roles.fapolicyd
+      vars:
+        fapolicyd_setup_permissive: false
+        fapolicyd_setup_integrity: sha256
+        fapolicyd_setup_trust: rpmdb,file
 ```
 
 ## Reviewing Existing Configuration
@@ -574,9 +619,13 @@ fapolicyd-cli --dump-db
 | Dump active trust database | `fapolicyd-cli --dump-db` |
 | Add a trusted file | `fapolicyd-cli --file add /path/to/file --trust-file <name>` |
 | Add an existing directory tree to trust | `fapolicyd-cli --file add /path/to/directory/ --trust-file <name>` |
+| Remove a trusted file | `fapolicyd-cli --file delete /path/to/file --trust-file <name>` |
 | Refresh one changed trust entry | `fapolicyd-cli --file update /path/to/file` |
 | Refresh all trust entries | `fapolicyd-cli --file update` |
 | Update active trust database | `fapolicyd-cli --update` |
+| Inspect fapolicyd MIME type | `fapolicyd-cli --ftype /path/to/file` |
+| Run in debug-deny mode | `fapolicyd --debug-deny` |
+| Run in full debug mode | `fapolicyd --debug` |
 | Validate source rules | `fagenrules --check` |
 | Compile rule files | `fagenrules --load` |
 | Reload compiled rules | `fapolicyd-cli --reload-rules` |
