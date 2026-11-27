@@ -10,7 +10,7 @@ nav_order: 16
 
 ## Installation and Service Management
 
-Apache (`httpd`) and `mod_ssl` are not installed by default on RHEL 9+. Install and manage them with `dnf` and `systemctl`:
+Apache (`httpd`) and `mod_ssl` are not installed by default on RHEL 8+. Install and manage them with `dnf` and `systemctl`:
 
 ```bash
 # Install Apache HTTP Server and SSL/TLS module
@@ -90,6 +90,9 @@ chmod 755 /var/www/site1/uploads
 #### Default Virtual Host Behavior
 
 When multiple virtual hosts are configured, a request without a matching `ServerName` is handled by the first applicable virtual host loaded by Apache. File ordering under `/etc/httpd/conf.d/` can therefore affect which virtual host becomes the default.
+
+{: .note }
+> When wrapping virtual-host directives in `<IfModule>`, use either the module identifier from `httpd -M` without an extension (for example, `<IfModule ssl_module>`) or the `.c` source name (`<IfModule mod_ssl.c>`). Do not use `.so` (`mod_ssl.so` will not match).
 
 ### Directory Access Control Directives
 
